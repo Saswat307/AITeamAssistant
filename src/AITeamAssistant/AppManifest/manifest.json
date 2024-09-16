@@ -1,0 +1,57 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.14/MicrosoftTeams.schema.json",
+  "version": "1.0.3",
+  "manifestVersion": "1.14",
+  "id": "baa7df0a-f695-4c07-927b-1eec736f88ba",
+  "packageName": "com.microsoft.stark",
+  "developer": {
+    "name": "Microsoft Hackathaon",
+    "websiteUrl": "https://example.azurewebsites.net",
+    "privacyUrl": "https://teams.microsoft.com",
+    "termsOfUseUrl": "https://teams.microsoft.com"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "StarkEmployee",
+    "full": "StarkEmployee"
+  },
+  "description": {
+    "short": "StarkEmployee bot",
+    "full": "StarkEmployee bot"
+  },
+  "accentColor": "#FFFFFF",
+  "bots": [
+    {
+      "botId": "baa7df0a-f695-4c07-927b-1eec736f88ba",
+      "scopes": [
+        "personal",
+        "team",
+        "groupchat"
+      ],
+      "commandLists": [
+        {
+          "commands": [
+            {
+              "title": "welcome",
+              "description": "Resend welcome card of this Bot"
+            }
+          ],
+          "scopes": [
+            "personal"
+          ]
+        }
+      ],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "supportsCalling": true,
+      "supportsVideo": true
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ]
+}

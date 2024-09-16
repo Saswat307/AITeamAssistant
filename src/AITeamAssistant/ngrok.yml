@@ -1,0 +1,11 @@
+authtoken: <token>
+version: 2
+tunnels:
+  bot-signaling:
+    proto: http
+    addr: 9442
+    hostname: bot.starkshackathon.com
+  bot-media:
+    proto: tcp
+    addr: 8445
+    remote_addr: 1.tcp.in.ngrok.io:20046
