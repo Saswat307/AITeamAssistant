@@ -11,14 +11,13 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-using EchoBot.Bot;
-using EchoBot.Constants;
-using EchoBot.Models;
+using AITeamAssistant.Bot;
+using AITeamAssistant.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Net;
 
-namespace EchoBot.Controllers
+namespace AITeamAssistant.Controllers
 {
     [ApiController]
     [Route("[controller]")]
@@ -53,8 +52,8 @@ namespace EchoBot.Controllers
                 var values = new
                 {
                     CallId = call.Id,
-                    ScenarioId = call.ScenarioId,
-                    ThreadId = call.Resource.ChatInfo.ThreadId,
+                    call.ScenarioId,
+                    call.Resource.ChatInfo.ThreadId,
                     Port = _settings.BotInstanceExternalPort.ToString()
                 };
 
@@ -62,7 +61,7 @@ namespace EchoBot.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Received HTTP {this.Request.Method}, {this.Request.Path}");
+                _logger.LogError(e, $"Received HTTP {Request.Method}, {Request.Path}");
                 return Problem(detail: e.StackTrace, statusCode: (int)HttpStatusCode.InternalServerError, title: e.Message);
             }
         }
@@ -84,7 +83,7 @@ namespace EchoBot.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Received HTTP {this.Request.Method}, {this.Request.Path}");
+                _logger.LogError(e, $"Received HTTP {Request.Method}, {Request.Path}");
                 return Problem(detail: e.StackTrace, statusCode: (int)HttpStatusCode.InternalServerError, title: e.Message);
             }
         }

@@ -11,14 +11,14 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************>
-using EchoBot.Bot;
-using EchoBot.Constants;
-using EchoBot.Util;
+using AITeamAssistant.Bot;
+using AITeamAssistant.Constants;
+using AITeamAssistant.Util;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph.Communications.Client;
 
-namespace EchoBot.Controllers
+namespace AITeamAssistant.Controllers
 {
     /// <summary>
     /// Entry point for handling call-related web hook requests from Skype Platform.
@@ -48,7 +48,7 @@ namespace EchoBot.Controllers
         [Route(HttpRouteConstants.OnIncomingRequestRoute)]
         public async Task<HttpResponseMessage> OnIncomingRequestAsync()
         {
-            var httpRequestMessage = HttpHelpers.ToHttpRequestMessage(this.Request);
+            var httpRequestMessage = Request.ToHttpRequestMessage();
             return await _botService.Client.ProcessNotificationAsync(httpRequestMessage).ConfigureAwait(false);
         }
 
@@ -60,7 +60,7 @@ namespace EchoBot.Controllers
         [Route(HttpRouteConstants.OnNotificationRequestRoute)]
         public async Task<HttpResponseMessage> OnNotificationRequestAsync()
         {
-            var httpRequestMessage = HttpHelpers.ToHttpRequestMessage(this.Request);
+            var httpRequestMessage = Request.ToHttpRequestMessage();
 
             // Pass the incoming notification to the sdk. The sdk takes care of what to do with it.
             return await _botService.Client.ProcessNotificationAsync(httpRequestMessage).ConfigureAwait(false);

@@ -11,12 +11,12 @@
 // </copyrigh>t
 // <summary></summary>
 // ***********************************************************************
-using EchoBot.Models;
+using AITeamAssistant.Models;
 using Microsoft.Graph.Communications.Calls;
 using Microsoft.Graph.Communications.Client;
 using System.Collections.Concurrent;
 
-namespace EchoBot.Bot
+namespace AITeamAssistant.Bot
 {
     /// <summary>
     /// Interface IBotService
