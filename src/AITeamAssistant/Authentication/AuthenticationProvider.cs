@@ -6,16 +6,9 @@
 // THIS CODE HAS NOT BEEN TESTED RIGOROUSLY.USING THIS CODE IN PRODUCTION ENVIRONMENT IS STRICTLY NOT RECOMMENDED.
 // THIS SAMPLE IS PURELY FOR DEMONSTRATION PURPOSES ONLY.
 // THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.
-namespace EchoBot.Authentication
+namespace AITeamAssistant.Authentication
 {
-    using System;
-    using System.IdentityModel.Tokens.Jwt;
-    using System.Net.Http;
-    using System.Net.Http.Headers;
-    using System.Security.Claims;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using EchoBot.Constants;
+    using AITeamAssistant.Constants;
     using Microsoft.Graph.Communications.Client.Authentication;
     using Microsoft.Graph.Communications.Common;
     using Microsoft.Graph.Communications.Common.Telemetry;
@@ -23,6 +16,13 @@ namespace EchoBot.Authentication
     using Microsoft.IdentityModel.Protocols;
     using Microsoft.IdentityModel.Protocols.OpenIdConnect;
     using Microsoft.IdentityModel.Tokens;
+    using System;
+    using System.IdentityModel.Tokens.Jwt;
+    using System.Net.Http;
+    using System.Net.Http.Headers;
+    using System.Security.Claims;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// The authentication provider for this bot instance.
@@ -102,24 +102,24 @@ namespace EchoBot.Authentication
             var tokenLink = oauthV2TokenLink.Replace(replaceString, tenant);
             var scopes = new string[] { $"{resource}/.default" };
 
-            this.GraphLogger.Info("AuthenticationProvider: Generating OAuth token.");
-            var app = ConfidentialClientApplicationBuilder.Create(this.appId)
+            GraphLogger.Info("AuthenticationProvider: Generating OAuth token.");
+            var app = ConfidentialClientApplicationBuilder.Create(appId)
                 .WithAuthority(tokenLink)
-                .WithClientSecret(this.appSecret)
+                .WithClientSecret(appSecret)
                 .Build();
 
             AuthenticationResult result;
             try
             {
-                result = await this.AcquireTokenWithRetryAsync(app, scopes, 3).ConfigureAwait(false);
+                result = await AcquireTokenWithRetryAsync(app, scopes, 3).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                this.GraphLogger.Error(ex, $"Failed to generate token for client: {this.appId}");
+                GraphLogger.Error(ex, $"Failed to generate token for client: {appId}");
                 throw;
             }
 
-            this.GraphLogger.Info($"AuthenticationProvider: Generated OAuth token. Expires in {result.ExpiresOn.Subtract(DateTimeOffset.UtcNow).TotalMinutes} minutes.");
+            GraphLogger.Info($"AuthenticationProvider: Generated OAuth token. Expires in {result.ExpiresOn.Subtract(DateTimeOffset.UtcNow).TotalMinutes} minutes.");
 
             request.Headers.Authorization = new AuthenticationHeaderValue(schema, result.AccessToken);
         }
@@ -145,18 +145,18 @@ namespace EchoBot.Authentication
             // with a private certificate.  In order for us to be able to ensure the certificate is
             // valid we need to download the corresponding public keys from a trusted source.
             const string authDomain = AppConstants.AuthDomain;
-            if (this.openIdConfiguration == null || DateTime.Now > this.prevOpenIdConfigUpdateTimestamp.Add(this.openIdConfigRefreshInterval))
+            if (openIdConfiguration == null || DateTime.Now > prevOpenIdConfigUpdateTimestamp.Add(openIdConfigRefreshInterval))
             {
-                this.GraphLogger.Info("Updating OpenID configuration");
+                GraphLogger.Info("Updating OpenID configuration");
 
                 // Download the OIDC configuration which contains the JWKS
                 IConfigurationManager<OpenIdConnectConfiguration> configurationManager =
                     new ConfigurationManager<OpenIdConnectConfiguration>(
                         authDomain,
                         new OpenIdConnectConfigurationRetriever());
-                this.openIdConfiguration = await configurationManager.GetConfigurationAsync(CancellationToken.None).ConfigureAwait(false);
+                openIdConfiguration = await configurationManager.GetConfigurationAsync(CancellationToken.None).ConfigureAwait(false);
 
-                this.prevOpenIdConfigUpdateTimestamp = DateTime.Now;
+                prevOpenIdConfigUpdateTimestamp = DateTime.Now;
             }
 
             // The incoming token should be issued by graph.
@@ -172,8 +172,8 @@ namespace EchoBot.Authentication
             TokenValidationParameters validationParameters = new TokenValidationParameters
             {
                 ValidIssuers = authIssuers,
-                ValidAudience = this.appId,
-                IssuerSigningKeys = this.openIdConfiguration.SigningKeys,
+                ValidAudience = appId,
+                IssuerSigningKeys = openIdConfiguration.SigningKeys,
             };
 
             ClaimsPrincipal claimsPrincipal;
@@ -193,7 +193,7 @@ namespace EchoBot.Authentication
             catch (Exception ex)
             {
                 // Some other error
-                this.GraphLogger.Error(ex, $"Failed to validate token for client: {this.appId}.");
+                GraphLogger.Error(ex, $"Failed to validate token for client: {appId}.");
                 return new RequestValidationResult() { IsValid = false };
             }
 

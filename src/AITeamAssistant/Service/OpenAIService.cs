@@ -1,17 +1,14 @@
-﻿using AITeamAssistant.Action;
-using API.Services.Interfaces;
-using Azure;
+﻿using Azure;
 using Azure.AI.OpenAI;
 using OpenAI.Chat;
 
-
-namespace API.Services
+namespace AITeamAssistant.Service
 {
     public class OpenAIService : IOpenAIService
     {
-        private string SystemMessage = "You are TeamMate AI, an employee assistant bot named Max. " +
+        private readonly string SystemMessage = "You are TeamMate AI, an employee assistant bot named Max. " +
     "In meetings, your responses will be used as audio output, so keep your answers brief and clear. " +
-    "Respond concisely, ideally under 250 words. If the question is unclear or you don’t know the answer, politely say you don’t know. " +
+    "Respond concisely, ideally under 200 words. If the question is unclear or you don’t know the answer, politely say you don’t know. " +
     "Focus on straightforward and helpful responses, avoiding unnecessary details to ensure compatibility with audio channels.";
 
         private string ActionDetectSystemPromptTemplate =
@@ -27,8 +24,8 @@ namespace API.Services
             "{0}";
 
         private readonly IConfiguration _configuration;
-        private ChatClient chatClient;
-        private ILogger _logger;
+        private readonly ChatClient chatClient;
+        private readonly ILogger _logger;
 
         public OpenAIService(IConfiguration configuration, ILogger<OpenAIService> logger)
         {
@@ -59,10 +56,10 @@ namespace API.Services
             return completion.Content[0].Text;
         }
 
-        public async Task<string> Ask(List<ChatMessage> chatMessages)
+        public string Ask(List<ChatMessage> chatMessages)
         {
 
-            OpenAI.Chat.ChatMessage systemMessage = chatMessages[0];
+            ChatMessage systemMessage = chatMessages[0];
             if (systemMessage is not SystemChatMessage)
             {
                 _logger.LogInformation("Adding System Message");

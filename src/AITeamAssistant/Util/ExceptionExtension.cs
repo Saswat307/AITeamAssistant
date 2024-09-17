@@ -1,9 +1,7 @@
-﻿using Microsoft.Graph;
-using Microsoft.Graph.Communications.Common.Telemetry;
-using System.Net;
+﻿using Microsoft.Graph.Communications.Common.Telemetry;
 using System.Runtime.CompilerServices;
 
-namespace EchoBot.Util
+namespace AITeamAssistant.Util
 {
     /// <summary>
     /// Extension methods for Exception.

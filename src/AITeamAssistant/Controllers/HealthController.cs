@@ -14,7 +14,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
-namespace EchoBot.Controllers
+namespace AITeamAssistant.Controllers
 {
 
     [Route("[controller]")]
@@ -42,7 +42,7 @@ namespace EchoBot.Controllers
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Received HTTP {this.Request.Method}, {this.Request.Path}");
+                _logger.LogError(e, $"Received HTTP {Request.Method}, {Request.Path}");
 
                 return Problem(detail: e.StackTrace, statusCode: (int)HttpStatusCode.InternalServerError, title: e.Message);
             }

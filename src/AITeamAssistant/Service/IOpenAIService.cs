@@ -1,6 +1,6 @@
 ﻿using OpenAI.Chat;
 
-namespace API.Services.Interfaces
+namespace AITeamAssistant.Service
 {
     public interface IOpenAIService
     {

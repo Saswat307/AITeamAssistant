@@ -11,7 +11,7 @@
 // </copyright>
 // <summary>HTTP route constants for routing requests to CallController methods.</summary>
 // ***********************************************************************-
-namespace EchoBot.Constants
+namespace AITeamAssistant.Constants
 {
     public static class HttpRouteConstants
     {

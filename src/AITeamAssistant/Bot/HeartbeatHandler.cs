@@ -11,13 +11,13 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************>
-using EchoBot.Util;
+using AITeamAssistant.Util;
 using Microsoft.Graph.Communications.Common;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using System.Timers;
 using Timer = System.Timers.Timer;
 
-namespace EchoBot.Bot
+namespace AITeamAssistant.Bot
 {
     /// <summary>
     /// The base class for handling heartbeats.
@@ -27,7 +27,7 @@ namespace EchoBot.Bot
         /// <summary>
         /// The heartbeat timer
         /// </summary>
-        private Timer heartbeatTimer;
+        private readonly Timer heartbeatTimer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HeartbeatHandler" /> class.
@@ -41,8 +41,8 @@ namespace EchoBot.Bot
             var timer = new Timer(frequency.TotalMilliseconds);
             timer.Enabled = true;
             timer.AutoReset = true;
-            timer.Elapsed += this.HeartbeatDetected;
-            this.heartbeatTimer = timer;
+            timer.Elapsed += HeartbeatDetected;
+            heartbeatTimer = timer;
         }
 
         /// <summary>
@@ -56,9 +56,9 @@ namespace EchoBot.Bot
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            this.heartbeatTimer.Elapsed -= this.HeartbeatDetected;
-            this.heartbeatTimer.Stop();
-            this.heartbeatTimer.Dispose();
+            heartbeatTimer.Elapsed -= HeartbeatDetected;
+            heartbeatTimer.Stop();
+            heartbeatTimer.Dispose();
         }
 
         /// <summary>
@@ -68,9 +68,9 @@ namespace EchoBot.Bot
         /// <param name="args">The elapsed event args.</param>
         private void HeartbeatDetected(object sender, ElapsedEventArgs args)
         {
-            var task = $"{this.GetType().FullName}.{nameof(this.HeartbeatAsync)}(args)";
-            this.GraphLogger.Verbose($"Starting running task: " + task);
-            _ = Task.Run(() => this.HeartbeatAsync(args)).ForgetAndLogExceptionAsync(this.GraphLogger, task);
+            var task = $"{GetType().FullName}.{nameof(this.HeartbeatAsync)}(args)";
+            GraphLogger.Verbose($"Starting running task: " + task);
+            _ = Task.Run(() => HeartbeatAsync(args)).ForgetAndLogExceptionAsync(GraphLogger, task);
         }
     }
 }

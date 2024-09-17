@@ -1,4 +1,5 @@
-﻿using AITeamAssistant.Action;
+﻿using AITeamAssistant.Service;
+using AITeamAssistant.Action;
 using API.Services.Interfaces;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
@@ -8,17 +9,29 @@ using OpenAI.Chat;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace EchoBot.Media
+namespace AITeamAssistant.Media
 {
     /// <summary>
     /// Class SpeechService.
     /// </summary>
     public class SpeechService
     {
+        private readonly string[] employeeNamesSnow = { "Snow", "Snow,", "Sno", "Sno,", "Snoh", "Snoh,", "Snuh", "Snoe" };
 
-        private string[] employeeNamesSnow = { "Snow", "Snow,", "Sno", "Sno,", "Snoh", "Snoh,", "Snuh", "Snoe" };
-        private string[] employeeNamesMax = { "Max", "Max,", "Max.", "Maks", "Maks,", "Maks.", "Macks", "Macks,", "Macks.", "Mac", "Mac,", "Mac,", "Maxx", "Maxx,", "Maxx.", "Mak", "Mak,", "Mak." };
-
+        private readonly string[] botNameVariations =
+                                {
+                                    "Maya", "Maya,", "Maya.",
+                                    "Mya", "Mya,", "Mya.",
+                                    "Mia", "Mia,", "Mia.",
+                                    "May", "May,", "May.",
+                                    "Meya", "Meya,", "Meya.",
+                                    "Miya", "Miya,", "Miya.",
+                                    "Miah", "Miah,", "Miah.",
+                                    "Maia", "Maia,", "Maia.",
+                                    "Meya", "Meya,", "Meya.",
+                                    "Miya", "Miya,", "Miya.",
+                                    "Meya", "Meya,", "Meya."
+                                };
         /// <summary>
         /// The is the indicator if the media stream is running
         /// </summary>
@@ -40,15 +53,23 @@ namespace EchoBot.Media
         private readonly SpeechSynthesizer _synthesizer;
 
         private readonly IOpenAIService _openAIService;
+        private readonly IPromptFlowService promptFlowService;
 
-        private StringBuilder recentConversation = new StringBuilder();
-        
-        private List<ChatMessage> meetingConversation = new List<ChatMessage>();
+        private readonly StringBuilder recentConversation = new();
+
+        // Contains Conversation History, Chat History.
+        private readonly ChatHistory chatHistory = new()
+        {
+            Interactions = Array.Empty<ChatInteraction>().ToList()
+        };
+
+        private readonly List<ChatMessage> meetingConversation = new();
 
         private ActionDispatcher actionDispatcher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SpeechService" /> class.
+        public SpeechService(AppSettings settings, ILogger logger, IOpenAIService openAIService, IPromptFlowService promptFlowService)
         public SpeechService(AppSettings settings, ILogger logger, IOpenAIService openAIService, IConfiguration configuration)
         {
             this.actionDispatcher = new ActionDispatcher(openAIService, configuration);
@@ -61,7 +82,7 @@ namespace EchoBot.Media
 
             var audioConfig = AudioConfig.FromStreamOutput(_audioOutputStream);
             _synthesizer = new SpeechSynthesizer(_speechConfig, audioConfig);
-
+            this.promptFlowService = promptFlowService;
         }
 
         /// <summary>
@@ -173,10 +194,9 @@ namespace EchoBot.Media
                         _logger.LogInformation($"RECOGNIZED: Text={e.Result.Text}");
                         // We recognized the speech
                         // Now do Speech to Text
-                        await processRecognizedTextAsync(e.Result.Text);
-                     
-                    }
-                    else if (e.Result.Reason == ResultReason.NoMatch)
+                        await ProcessRecognizedTextAsync(e.Result.Text);
+
+                    } else if (e.Result.Reason == ResultReason.NoMatch)
                     {
                         _logger.LogInformation($"NOMATCH: Speech could not be recognized.");
                     }
@@ -242,7 +262,7 @@ namespace EchoBot.Media
             using (var stream = AudioDataStream.FromResult(result))
             {
                 var currentTick = DateTime.Now.Ticks;
-                MediaStreamEventArgs args = new MediaStreamEventArgs
+                MediaStreamEventArgs args = new()
                 {
                     AudioMediaBuffers = Util.Utilities.CreateAudioMediaBuffers(stream, currentTick, _logger)
                 };
@@ -263,14 +283,15 @@ namespace EchoBot.Media
             recentConversation.Clear();
         }
 
-        private async Task processRecognizedTextAsync(string lastMessage)
+        private async Task ProcessRecognizedTextAsync(string lastMessage)
         {
             _logger.LogInformation("Processing Recognize text - " + lastMessage);
 
             var words = lastMessage.Split(' ');
-            string foundEmployee = words
-                        .FirstOrDefault(word => employeeNamesMax
-                            .Any(employee => word.Equals(employee, StringComparison.OrdinalIgnoreCase)));
+            var foundEmployee = lastMessage
+                                .Split(' ')
+                                .FirstOrDefault(word => botNameVariations
+                                .Contains(word, StringComparer.OrdinalIgnoreCase));
 
             if (!string.IsNullOrEmpty(foundEmployee))
             {
@@ -279,10 +300,31 @@ namespace EchoBot.Media
                 string questionPrompt = lastMessage;
                 string recentConversation = GetRecentConversation();
                 ClearRecentConversation();
+
+                var response = await promptFlowService.GetResponseAsync(question, chatHistory);
                 meetingConversation.Add(new UserChatMessage(recentConversation));
                 meetingConversation.Add(new UserChatMessage(questionPrompt));
 
                 var action = await _openAIService.DetectActionFromPrompt(questionPrompt, actionDispatcher.GetActionNames());
+
+                try
+                {
+                    chatHistory.Interactions.Add(new ChatInteraction()
+                    {
+                        Inputs = new()
+                        {
+                            ChatInput = question
+                        },
+                        Outputs = new()
+                        {
+                            ChatOutput = response
+                        }
+                    });
+                }
+                catch(Exception e)
+                {
+                    Console.WriteLine(e);
+                }
 
                 var response = string.Empty;
                 if (ActionDispatcher.NoActionFound.EqualsIgnoreCase(action)) {
@@ -296,8 +338,7 @@ namespace EchoBot.Media
                     meetingConversation.Add(new UserChatMessage(response));
                 }
                 await TextToSpeech(response);
-            }
-            else
+            } else
             {
                 _logger.LogInformation("Employee Name found. Not a question.");
                 AppendConversation(lastMessage);

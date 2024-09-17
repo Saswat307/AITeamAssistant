@@ -12,6 +12,9 @@
 // </copyright>
 // <summary>The bot media stream.</summary>
 // ***********************************************************************-
+using AITeamAssistant.Media;
+using AITeamAssistant.Service;
+using AITeamAssistant.Util;
 using AITeamAssistant.Action;
 using API.Services.Interfaces;
 using EchoBot.Media;
@@ -24,14 +27,14 @@ using Microsoft.Skype.Bots.Media;
 using Microsoft.Skype.Internal.Media.Services.Common;
 using System.Runtime.InteropServices;
 
-namespace EchoBot.Bot
+namespace AITeamAssistant.Bot
 {
     /// <summary>
     /// Class responsible for streaming audio and video.
     /// </summary>
     public class BotMediaStream : ObjectRootDisposable
     {
-        private AppSettings _settings;
+        private readonly AppSettings _settings;
 
         /// <summary>
         /// The participants
@@ -54,6 +57,7 @@ namespace EchoBot.Bot
         private int shutdown;
         private readonly SpeechService _languageService;
         private readonly IOpenAIService _openAIService;
+        private readonly IPromptFlowService promptFlowService;
         private readonly IConfiguration _configuration;
 
         /// <summary>
@@ -72,6 +76,8 @@ namespace EchoBot.Bot
             ILogger logger,
             AppSettings settings,
             IOpenAIService openAIService,
+            IPromptFlowService promptFlowService
+            IOpenAIService openAIService,
             IConfiguration configuration
         )
             : base(graphLogger)
@@ -85,26 +91,27 @@ namespace EchoBot.Bot
             _settings = settings;
             _logger = logger;
 
-            this.participants = new List<IParticipant>();
+            participants = new List<IParticipant>();
 
-            this.audioSendStatusActive = new TaskCompletionSource<bool>();
-            this.startVideoPlayerCompleted = new TaskCompletionSource<bool>();
+            audioSendStatusActive = new TaskCompletionSource<bool>();
+            startVideoPlayerCompleted = new TaskCompletionSource<bool>();
 
             // Subscribe to the audio media.
-            this._audioSocket = mediaSession.AudioSocket;
-            if (this._audioSocket == null)
+            _audioSocket = mediaSession.AudioSocket;
+            if (_audioSocket == null)
             {
                 throw new InvalidOperationException("A mediaSession needs to have at least an audioSocket");
             }
 
-            var ignoreTask = this.StartAudioVideoFramePlayerAsync().ForgetAndLogExceptionAsync(this.GraphLogger, "Failed to start the player");
+            var ignoreTask = StartAudioVideoFramePlayerAsync().ForgetAndLogExceptionAsync(GraphLogger, "Failed to start the player");
 
-            this._audioSocket.AudioSendStatusChanged += OnAudioSendStatusChanged;            
+            _audioSocket.AudioSendStatusChanged += OnAudioSendStatusChanged;
 
-            this._audioSocket.AudioMediaReceived += this.OnAudioMediaReceived;
+            _audioSocket.AudioMediaReceived += OnAudioMediaReceived;
 
             if (_settings.UseSpeechService)
             {
+                _languageService = new SpeechService(_settings, _logger, _openAIService, promptFlowService);
                 _languageService = new SpeechService(_settings, _logger, _openAIService, _configuration);
                 _languageService.SendMediaBuffer += this.OnSendMediaBuffer;
             }
@@ -125,35 +132,35 @@ namespace EchoBot.Bot
         /// <returns><see cref="Task" />.</returns>
         public async Task ShutdownAsync()
         {
-            if (Interlocked.CompareExchange(ref this.shutdown, 1, 1) == 1)
+            if (Interlocked.CompareExchange(ref shutdown, 1, 1) == 1)
             {
                 return;
             }
 
-            await this.startVideoPlayerCompleted.Task.ConfigureAwait(false);
+            await startVideoPlayerCompleted.Task.ConfigureAwait(false);
 
             // unsubscribe
-            if (this._audioSocket != null)
+            if (_audioSocket != null)
             {
-                this._audioSocket.AudioSendStatusChanged -= this.OnAudioSendStatusChanged;
+                _audioSocket.AudioSendStatusChanged -= OnAudioSendStatusChanged;
             }
 
             // shutting down the players
-            if (this.audioVideoFramePlayer != null)
+            if (audioVideoFramePlayer != null)
             {
-                await this.audioVideoFramePlayer.ShutdownAsync().ConfigureAwait(false);
+                await audioVideoFramePlayer.ShutdownAsync().ConfigureAwait(false);
             }
 
             // make sure all the audio and video buffers are disposed, it can happen that,
             // the buffers were not enqueued but the call was disposed if the caller hangs up quickly
-            foreach (var audioMediaBuffer in this.audioMediaBuffers)
+            foreach (var audioMediaBuffer in audioMediaBuffers)
             {
                 audioMediaBuffer.Dispose();
             }
 
-            _logger.LogInformation($"disposed {this.audioMediaBuffers.Count} audioMediaBUffers.");
+            _logger.LogInformation($"disposed {audioMediaBuffers.Count} audioMediaBUffers.");
 
-            this.audioMediaBuffers.Clear();
+            audioMediaBuffers.Clear();
         }
 
         /// <summary>
@@ -165,12 +172,12 @@ namespace EchoBot.Bot
             try
             {
                 _logger.LogInformation("Send status active for audio and video Creating the audio video player");
-                this.audioVideoFramePlayerSettings =
+                audioVideoFramePlayerSettings =
                     new AudioVideoFramePlayerSettings(new AudioSettings(20), new VideoSettings(), 1000);
-                this.audioVideoFramePlayer = new AudioVideoFramePlayer(
+                audioVideoFramePlayer = new AudioVideoFramePlayer(
                     (AudioSocket)_audioSocket,
                     null,
-                    this.audioVideoFramePlayerSettings);
+                    audioVideoFramePlayerSettings);
 
                 _logger.LogInformation("created the audio video player");
             }
@@ -180,7 +187,7 @@ namespace EchoBot.Bot
             }
             finally
             {
-                this.startVideoPlayerCompleted.TrySetResult(true);
+                startVideoPlayerCompleted.TrySetResult(true);
             }
         }
 
@@ -196,7 +203,7 @@ namespace EchoBot.Bot
 
             if (e.MediaSendStatus == MediaSendStatus.Active)
             {
-                this.audioSendStatusActive.TrySetResult(true);
+                audioSendStatusActive.TrySetResult(true);
             }
         }
 
@@ -219,8 +226,7 @@ namespace EchoBot.Bot
                     // the particpant talking will hear the bot repeat what they said
                     await _languageService.AppendAudioBuffer(e.Buffer);
                     e.Buffer.Dispose();
-                }
-                else
+                } else
                 {
                     // send audio buffer back on the audio socket
                     // the particpant talking will hear themselves
@@ -231,14 +237,14 @@ namespace EchoBot.Bot
                         Marshal.Copy(e.Buffer.Data, buffer, 0, (int)length);
 
                         var currentTick = DateTime.Now.Ticks;
-                        this.audioMediaBuffers = Util.Utilities.CreateAudioMediaBuffers(buffer, currentTick, _logger);
-                        await this.audioVideoFramePlayer.EnqueueBuffersAsync(this.audioMediaBuffers, new List<VideoMediaBuffer>());
+                        audioMediaBuffers = Util.Utilities.CreateAudioMediaBuffers(buffer, currentTick, _logger);
+                        await audioVideoFramePlayer.EnqueueBuffersAsync(audioMediaBuffers, new List<VideoMediaBuffer>());
                     }
                 }
             }
             catch (Exception ex)
             {
-                this.GraphLogger.Error(ex);
+                GraphLogger.Error(ex);
                 _logger.LogError(ex, "OnAudioMediaReceived error");
             }
             finally
@@ -249,8 +255,8 @@ namespace EchoBot.Bot
 
         private void OnSendMediaBuffer(object? sender, Media.MediaStreamEventArgs e)
         {
-            this.audioMediaBuffers = e.AudioMediaBuffers;
-            var result = Task.Run(async () => await this.audioVideoFramePlayer.EnqueueBuffersAsync(this.audioMediaBuffers, new List<VideoMediaBuffer>())).GetAwaiter();
+            audioMediaBuffers = e.AudioMediaBuffers;
+            var result = Task.Run(async () => await audioVideoFramePlayer.EnqueueBuffersAsync(audioMediaBuffers, new List<VideoMediaBuffer>())).GetAwaiter();
         }
     }
 }

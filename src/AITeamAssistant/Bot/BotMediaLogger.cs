@@ -1,6 +1,6 @@
 ﻿using MediaLogLevel = Microsoft.Skype.Bots.Media.LogLevel;
 
-namespace EchoBot.Bot
+namespace AITeamAssistant.Bot
 {
     /// <summary>
     /// The MediaPlatformLogger.
@@ -43,7 +43,7 @@ namespace EchoBot.Bot
                     break;
             }
 
-            this._logger.Log(logLevel, logStatement);
+            _logger.Log(logLevel, logStatement);
         }
     }
 }
