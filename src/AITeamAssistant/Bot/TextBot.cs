@@ -1,25 +1,44 @@
 ﻿// Generated with Bot Builder V4 SDK Template for Visual Studio EchoBot v4.22.0
 
-using API.Services.Interfaces;
+using AITeamAssistant.Service;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
 
-namespace EchoBot.Bots
+namespace AITeamAssistant.Bot
 {
     public class TextBot : ActivityHandler
     {
-        private IOpenAIService openAIService;
-        public TextBot(IOpenAIService openAIService)
+        private readonly IOpenAIService openAIService;
+        private readonly IPromptFlowService promptFlowService;
+        private readonly IMeetingService meetingService;
+
+        public TextBot(IOpenAIService openAIService, IPromptFlowService promptFlowService, IMeetingService meetingService)
         {
             this.openAIService = openAIService;
+            this.promptFlowService = promptFlowService;
+            this.meetingService = meetingService;
         }
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
             var question = turnContext.Activity.RemoveRecipientMention();
-            var answer = this.openAIService.Ask(question);
+            //var answer = await this.openAIService.Ask(question);
+            var answer = await promptFlowService.GetResponseAsync(question, new ChatHistory() { Interactions = new List<ChatInteraction>() }); // @TODO Get the Context.
             await turnContext.SendActivityAsync(MessageFactory.Text(answer, answer), cancellationToken);
         }
+
+        public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
+        {
+            if (turnContext.Activity.Type == ActivityTypes.Event && turnContext.Activity.Name == "meeting")
+            {
+                var meetingInfo = await meetingService.GetMeetingInfoAsync(turnContext.Activity.ChannelId); // @TODO;
+                /*if (meetingInfo != null)
+                    await JoinMeetingAsync(meetingInfo.JoinWebUrl);*/
+            }
+
+            await base.OnTurnAsync(turnContext, cancellationToken);
+        }
+
 
         protected override async Task OnMembersAddedAsync(IList<ChannelAccount> membersAdded, ITurnContext<IConversationUpdateActivity> turnContext, CancellationToken cancellationToken)
         {

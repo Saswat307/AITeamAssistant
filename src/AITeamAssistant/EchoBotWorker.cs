@@ -1,6 +1,4 @@
-using EchoBot.Bot;
-
-namespace EchoBot
+namespace AITeamAssistant
 {
     public class EchoBotWorker : BackgroundService
     {
@@ -43,7 +41,7 @@ namespace EchoBot
                 // recovery options, we need to terminate the process with a non-zero exit code.
                 Environment.Exit(1);
             }
-            finally 
+            finally
             {
                 _logger.LogInformation("Stopping Echo Bot");
                 _hostApplicationLifetime.StopApplication();

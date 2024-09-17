@@ -1,21 +1,19 @@
-﻿using API.Services.Interfaces;
-using Azure;
+﻿using Azure;
 using Azure.AI.OpenAI;
 using OpenAI.Chat;
 
-
-namespace API.Services
+namespace AITeamAssistant.Service
 {
     public class OpenAIService : IOpenAIService
     {
-        private string SystemMessage = "You are TeamMate AI, an employee assistant bot named Max. " +
+        private readonly string SystemMessage = "You are TeamMate AI, an employee assistant bot named Max. " +
     "In meetings, your responses will be used as audio output, so keep your answers brief and clear. " +
-    "Respond concisely, ideally under 250 words. If the question is unclear or you don’t know the answer, politely say you don’t know. " +
+    "Respond concisely, ideally under 200 words. If the question is unclear or you don’t know the answer, politely say you don’t know. " +
     "Focus on straightforward and helpful responses, avoiding unnecessary details to ensure compatibility with audio channels.";
 
         private readonly IConfiguration _configuration;
-        private ChatClient chatClient;
-        private ILogger _logger;
+        private readonly ChatClient chatClient;
+        private readonly ILogger _logger;
 
         public OpenAIService(IConfiguration configuration, ILogger<OpenAIService> logger)
         {
@@ -25,7 +23,7 @@ namespace API.Services
             string uriFromEnvironment = _configuration["AZURE_OPENAI_ENDPOINT"];
             string modelFromEnvironment = _configuration["AZURE_OPENAI_MODEL"];
 
-            
+
             AzureOpenAIClient azureClient = new(
                 new Uri(uriFromEnvironment),
                 new AzureKeyCredential(keyFromEnvironment));
@@ -35,7 +33,7 @@ namespace API.Services
         public string Ask(string question)
         {
             _logger.LogInformation("Question " + question);
-            List<OpenAI.Chat.ChatMessage> chatMessages = new List<OpenAI.Chat.ChatMessage>()
+            List<ChatMessage> chatMessages = new List<ChatMessage>()
             {
                 new SystemChatMessage(SystemMessage),
                 new UserChatMessage(question),
@@ -46,19 +44,19 @@ namespace API.Services
             return completion.Content[0].Text;
         }
 
-        public string Ask(List<OpenAI.Chat.ChatMessage> chatMessages)
+        public string Ask(List<ChatMessage> chatMessages)
         {
 
-            OpenAI.Chat.ChatMessage systemMessage = chatMessages[0];
+            ChatMessage systemMessage = chatMessages[0];
             if (systemMessage is not SystemChatMessage)
             {
                 _logger.LogInformation("Adding System Message");
                 chatMessages.Insert(0, new SystemChatMessage(SystemMessage));
             }
-           
+
             foreach (var chatMessage in chatMessages)
             {
-                if(chatMessage.Content.Count > 0)
+                if (chatMessage.Content.Count > 0)
                 {
 
                     // Check if the message is from a user

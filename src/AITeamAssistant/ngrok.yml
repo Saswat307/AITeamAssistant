@@ -1,4 +1,5 @@
-authtoken: <token>
+authtoken: 2m0tMdtEYHlMFgom13mMf1vtcXH_7V4NHK2zVvKHqwkZgiUM1
+# authtoken: 2m93IRC7TlkeP1pSngeqFyBqhiz_4E5xNih66NVzXyF2XaNPC // Mine
 version: 2
 tunnels:
   bot-signaling:

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace EchoBot
+namespace AITeamAssistant
 {
     public class AppSettings
     {
@@ -96,7 +96,7 @@ namespace EchoBot
         /// Used for local development to set the ports to be used
         /// with ngrok
         /// </summary>
-        public bool UseLocalDevSettings { get; set; } 
+        public bool UseLocalDevSettings { get; set; }
 
         /// <summary>
         /// Set by the user only when using local dev settings
