@@ -1,4 +1,4 @@
-authtoken: <token>
+authtoken: <authtoken>
 version: 2
 tunnels:
   bot-signaling:

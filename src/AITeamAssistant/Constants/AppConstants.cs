@@ -11,7 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-namespace EchoBot.Constants
+namespace AITeamAssistant.Constants
 {
     /// <summary>
     /// Class AzureConstants.

@@ -11,7 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-namespace EchoBot.Models
+namespace AITeamAssistant.Models
 {
     /// <summary>
     /// The join call body.

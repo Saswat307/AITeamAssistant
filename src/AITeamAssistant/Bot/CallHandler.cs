@@ -1,6 +1,5 @@
-﻿using API.Services.Interfaces;
-using EchoBot.Util;
-using Microsoft.Graph;
+﻿using AITeamAssistant.Service;
+using AITeamAssistant.Util;
 using Microsoft.Graph.Communications.Calls;
 using Microsoft.Graph.Communications.Calls.Media;
 using Microsoft.Graph.Communications.Common.Telemetry;
@@ -8,7 +7,7 @@ using Microsoft.Graph.Communications.Resources;
 using Microsoft.Graph.Models;
 using System.Timers;
 
-namespace EchoBot.Bot
+namespace AITeamAssistant.Bot
 {
     /// <summary>
     /// Call Handler Logic.
@@ -37,31 +36,32 @@ namespace EchoBot.Bot
             ICall statefulCall,
             AppSettings settings,
             ILogger logger,
-            IOpenAIService openAIService
+            IOpenAIService openAIService,
+            IPromptFlowService promptFlowService
         )
             : base(TimeSpan.FromMinutes(10), statefulCall?.GraphLogger)
         {
-            this.Call = statefulCall;
-            this.Call.OnUpdated += this.CallOnUpdated;
-            this.Call.Participants.OnUpdated += this.ParticipantsOnUpdated;
+            Call = statefulCall;
+            Call.OnUpdated += CallOnUpdated;
+            Call.Participants.OnUpdated += ParticipantsOnUpdated;
 
-            this.BotMediaStream = new BotMediaStream(this.Call.GetLocalMediaSession(), this.Call.Id, this.GraphLogger, logger, settings, openAIService);
+            BotMediaStream = new BotMediaStream(Call.GetLocalMediaSession(), Call.Id, GraphLogger, logger, settings, openAIService, promptFlowService);
         }
 
         /// <inheritdoc/>
         protected override Task HeartbeatAsync(ElapsedEventArgs args)
         {
-            return this.Call.KeepAliveAsync();
+            return Call.KeepAliveAsync();
         }
 
         /// <inheritdoc />
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            this.Call.OnUpdated -= this.CallOnUpdated;
-            this.Call.Participants.OnUpdated -= this.ParticipantsOnUpdated;
+            Call.OnUpdated -= CallOnUpdated;
+            Call.Participants.OnUpdated -= ParticipantsOnUpdated;
 
-            this.BotMediaStream?.ShutdownAsync().ForgetAndLogExceptionAsync(this.GraphLogger);
+            BotMediaStream?.ShutdownAsync().ForgetAndLogExceptionAsync(GraphLogger);
         }
 
         /// <summary>
@@ -78,7 +78,7 @@ namespace EchoBot.Bot
                 // Call is established...
             }
 
-            if ((e.OldResource.State == CallState.Established) && (e.NewResource.State == CallState.Terminated))
+            if (e.OldResource.State == CallState.Established && e.NewResource.State == CallState.Terminated)
             {
                 if (BotMediaStream != null)
                 {
@@ -96,9 +96,9 @@ namespace EchoBot.Bot
         private string createParticipantUpdateJson(string participantId, string participantDisplayName = "")
         {
             if (participantDisplayName.Length == 0)
-                return "{" + String.Format($"\"Id\": \"{participantId}\"") + "}";
+                return "{" + string.Format($"\"Id\": \"{participantId}\"") + "}";
             else
-                return "{" + String.Format($"\"Id\": \"{participantId}\", \"DisplayName\": \"{participantDisplayName}\"") + "}";
+                return "{" + string.Format($"\"Id\": \"{participantId}\", \"DisplayName\": \"{participantDisplayName}\"") + "}";
         }
 
         /// <summary>
@@ -135,13 +135,12 @@ namespace EchoBot.Bot
 
                 if (participantDetails != null)
                 {
-                    json = updateParticipant(this.BotMediaStream.participants, participant, added, participantDetails.DisplayName);
-                }
-                else if (participant.Resource.Info.Identity.AdditionalData?.Count > 0)
+                    json = updateParticipant(BotMediaStream.participants, participant, added, participantDetails.DisplayName);
+                } else if (participant.Resource.Info.Identity.AdditionalData?.Count > 0)
                 {
                     if (CheckParticipantIsUsable(participant))
                     {
-                        json = updateParticipant(this.BotMediaStream.participants, participant, added);
+                        json = updateParticipant(BotMediaStream.participants, participant, added);
                     }
                 }
             }

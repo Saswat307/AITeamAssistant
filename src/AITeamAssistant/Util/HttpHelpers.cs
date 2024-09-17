@@ -13,7 +13,7 @@
 // ***********************************************************************>
 using Microsoft.AspNetCore.Http;
 
-namespace EchoBot.Util
+namespace AITeamAssistant.Util
 {
     public static class HttpHelpers
     {
@@ -30,7 +30,7 @@ namespace EchoBot.Util
             {
                 Scheme = req.Scheme,
                 Host = req.Host.Host,
-                Port = req.Host.Port != null ? req.Host.Port.Value: 80,
+                Port = req.Host.Port != null ? req.Host.Port.Value : 80,
                 Path = req.PathBase.Add(req.Path),
                 Query = req.QueryString.ToString()
             }.Uri);

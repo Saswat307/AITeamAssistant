@@ -11,34 +11,38 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-using EchoBot.Authentication;
-using EchoBot.Constants;
-using EchoBot.Models;
+using AITeamAssistant.Authentication;
+using AITeamAssistant.Constants;
+using AITeamAssistant.Models;
+using AITeamAssistant.Service;
+using AITeamAssistant.Util;
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Schema.Teams;
+using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Options;
-using Microsoft.Graph;
 using Microsoft.Graph.Communications.Calls;
 using Microsoft.Graph.Communications.Calls.Media;
 using Microsoft.Graph.Communications.Client;
 using Microsoft.Graph.Communications.Common;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using Microsoft.Graph.Communications.Resources;
+using Microsoft.Graph.Contracts;
+using Microsoft.Graph.Models;
 using Microsoft.Skype.Bots.Media;
 using System.Collections.Concurrent;
 using System.Net;
-using EchoBot.Util;
-using Microsoft.Graph.Models;
-using Microsoft.Graph.Contracts;
-using API.Services.Interfaces;
+using AdaptiveCards;
+using Attachment = Microsoft.Bot.Schema.Attachment;
 
-namespace EchoBot.Bot
+namespace AITeamAssistant.Bot
 {
     /// <summary>
     /// Class BotService.
-    /// Implements the <see cref="System.IDisposable" />
-    /// Implements the <see cref="EchoBot.Bot.IBotService" />
+    /// Implements the <see cref="IDisposable" />
+    /// Implements the <see cref="IBotService" />
     /// </summary>
-    /// <seealso cref="System.IDisposable" />
-    /// <seealso cref="EchoBot.Bot.IBotService" />
+    /// <seealso cref="IDisposable" />
+    /// <seealso cref="IBotService" />
     public class BotService : IDisposable, IBotService
     {
         /// <summary>
@@ -73,15 +77,17 @@ namespace EchoBot.Bot
         /// <value>The client.</value>
         public ICommunicationsClient Client { get; private set; }
 
-        public IOpenAIService _openAIService { get; }
+        public IOpenAIService OpenAIService { get; }
+
+        public IPromptFlowService PromptFlowService { get; }
 
         /// <summary>
         /// Dispose of the call client
         /// </summary>
         public void Dispose()
         {
-            this.Client?.Dispose();
-            this.Client = null;
+            Client?.Dispose();
+            Client = null;
         }
 
         /// <summary>
@@ -96,13 +102,15 @@ namespace EchoBot.Bot
             ILogger<BotService> logger,
             IOptions<AppSettings> settings,
             IBotMediaLogger mediaLogger,
-            IOpenAIService openAIService)
+            IOpenAIService openAIService,
+            IPromptFlowService promptFlowService)
         {
-            _openAIService = openAIService;
+            OpenAIService = openAIService;
             _graphLogger = graphLogger;
             _logger = logger;
             _settings = settings.Value;
             _mediaPlatformLogger = mediaLogger;
+            this.PromptFlowService = promptFlowService;
         }
 
         /// <summary>
@@ -111,7 +119,7 @@ namespace EchoBot.Bot
         public void Initialize()
         {
             _logger.LogInformation("Initializing Bot Service");
-            var name = this.GetType().Assembly.GetName().Name;
+            var name = GetType().Assembly.GetName().Name;
             var builder = new CommunicationsClientBuilder(
                 name,
                 _settings.AadAppId,
@@ -145,9 +153,9 @@ namespace EchoBot.Bot
             builder.SetMediaPlatformSettings(mediaPlatformSettings);
             builder.SetServiceBaseUrl(new Uri(AppConstants.PlaceCallEndpointUrl));
 
-            this.Client = builder.Build();
-            this.Client.Calls().OnIncoming += this.CallsOnIncoming;
-            this.Client.Calls().OnUpdated += this.CallsOnUpdated;
+            Client = builder.Build();
+            Client.Calls().OnIncoming += CallsOnIncoming;
+            Client.Calls().OnUpdated += CallsOnUpdated;
         }
 
         /// <summary>
@@ -157,8 +165,8 @@ namespace EchoBot.Bot
         public async Task Shutdown()
         {
             _logger.LogWarning("Terminating all calls during shutdown event");
-            await this.Client.TerminateAsync();
-            this.Dispose();
+            await Client.TerminateAsync();
+            Dispose();
         }
 
         /// <summary>
@@ -171,7 +179,7 @@ namespace EchoBot.Bot
             string callId = string.Empty;
             try
             {
-                var callHandler = this.GetHandlerOrThrow(threadId);
+                var callHandler = GetHandlerOrThrow(threadId);
                 callId = callHandler.Call.Id;
                 await callHandler.Call.DeleteAsync().ConfigureAwait(false);
             }
@@ -181,7 +189,7 @@ namespace EchoBot.Bot
                 // This will trigger the ICallCollection.OnUpdated event with the removed resource.
                 if (!string.IsNullOrEmpty(callId))
                 {
-                    this.Client.Calls().TryForceRemove(callId, out ICall _);
+                    Client.Calls().TryForceRemove(callId, out ICall _);
                 }
             }
         }
@@ -199,7 +207,7 @@ namespace EchoBot.Bot
             var (chatInfo, meetingInfo) = JoinInfo.ParseJoinURL(joinCallBody.JoinUrl);
 
             var tenantId = (meetingInfo as OrganizerMeetingInfo).Organizer.GetPrimaryIdentity().GetTenantId();
-            var mediaSession = this.CreateLocalMediaSession();
+            var mediaSession = CreateLocalMediaSession();
 
             var joinParams = new JoinMeetingParameters(chatInfo, meetingInfo, mediaSession)
             {
@@ -219,9 +227,9 @@ namespace EchoBot.Bot
                 };
             }
 
-            if (!this.CallHandlers.TryGetValue(joinParams.ChatInfo.ThreadId, out CallHandler? call))
+            if (!CallHandlers.TryGetValue(joinParams.ChatInfo.ThreadId, out CallHandler? call))
             {
-                var statefulCall = await this.Client.Calls().AddAsync(joinParams, scenarioId).ConfigureAwait(false);
+                var statefulCall = await Client.Calls().AddAsync(joinParams, scenarioId).ConfigureAwait(false);
                 statefulCall.GraphLogger.Info($"Call creation complete: {statefulCall.Id}");
                 _logger.LogInformation($"Call creation complete: {statefulCall.Id}");
                 return statefulCall;
@@ -241,7 +249,7 @@ namespace EchoBot.Bot
             try
             {
                 // create media session object, this is needed to establish call connections
-                return this.Client.CreateMediaSession(
+                return Client.CreateMediaSession(
                     new AudioSocketSettings
                     {
                         StreamDirections = StreamDirection.Sendrecv,
@@ -303,8 +311,8 @@ namespace EchoBot.Bot
                 }
 
                 IMediaSession mediaSession = Guid.TryParse(call.Id, out Guid callId)
-                    ? this.CreateLocalMediaSession(callId)
-                    : this.CreateLocalMediaSession();
+                    ? CreateLocalMediaSession(callId)
+                    : CreateLocalMediaSession();
 
                 // Answer call
                 call?.AnswerAsync(mediaSession).ForgetAndLogExceptionAsync(
@@ -322,17 +330,20 @@ namespace EchoBot.Bot
         {
             foreach (var call in args.AddedResources)
             {
-                var callHandler = new CallHandler(call, _settings, _logger, _openAIService);
+                var callHandler = new CallHandler(call, _settings, _logger, OpenAIService, PromptFlowService);
                 var threadId = call.Resource.ChatInfo.ThreadId;
-                this.CallHandlers[threadId] = callHandler;
+                // var callId = call.Resource.CallChainId;
+                CallHandlers[threadId] = callHandler;
             }
 
             foreach (var call in args.RemovedResources)
             {
                 var threadId = call.Resource.ChatInfo.ThreadId;
-                if (this.CallHandlers.TryRemove(threadId, out CallHandler? handler))
+                // var callId = call.Resource.CallChainId;
+                if (CallHandlers.TryRemove(threadId, out CallHandler? handler))
                 {
-                    Task.Run(async () => {
+                    Task.Run(async () =>
+                    {
                         await handler.BotMediaStream.ShutdownAsync();
                         handler.Dispose();
                     });
@@ -348,7 +359,7 @@ namespace EchoBot.Bot
         /// <exception cref="ArgumentException">call ({callLegId}) not found</exception>
         private CallHandler GetHandlerOrThrow(string threadId)
         {
-            if (!this.CallHandlers.TryGetValue(threadId, out CallHandler? handler))
+            if (!CallHandlers.TryGetValue(threadId, out CallHandler? handler))
             {
                 throw new ArgumentException($"call ({threadId}) not found");
             }
