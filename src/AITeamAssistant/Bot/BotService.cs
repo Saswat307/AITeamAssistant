@@ -74,6 +74,7 @@ namespace EchoBot.Bot
         public ICommunicationsClient Client { get; private set; }
 
         public IOpenAIService _openAIService { get; }
+        public IConfiguration _configuration;
 
         /// <summary>
         /// Dispose of the call client
@@ -96,13 +97,15 @@ namespace EchoBot.Bot
             ILogger<BotService> logger,
             IOptions<AppSettings> settings,
             IBotMediaLogger mediaLogger,
-            IOpenAIService openAIService)
+            IOpenAIService openAIService,
+            IConfiguration configuration)
         {
             _openAIService = openAIService;
             _graphLogger = graphLogger;
             _logger = logger;
             _settings = settings.Value;
             _mediaPlatformLogger = mediaLogger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -322,7 +325,7 @@ namespace EchoBot.Bot
         {
             foreach (var call in args.AddedResources)
             {
-                var callHandler = new CallHandler(call, _settings, _logger, _openAIService);
+                var callHandler = new CallHandler(call, _settings, _logger, _openAIService,_configuration);
                 var threadId = call.Resource.ChatInfo.ThreadId;
                 this.CallHandlers[threadId] = callHandler;
             }

@@ -22,6 +22,7 @@ using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using API.Services.Interfaces;
 using API.Services;
+using AITeamAssistant.Action;
 
 namespace EchoBot
 {
@@ -95,6 +96,7 @@ namespace EchoBot
 
             builder.Services.AddSingleton<IBotService, BotService>();
             builder.Services.AddSingleton<IOpenAIService, OpenAIService>();
+            builder.Services.AddSingleton<ActionDispatcher, ActionDispatcher>();
 
             // Bot Settings Setup
             var botInternalHostingProtocol = "https";

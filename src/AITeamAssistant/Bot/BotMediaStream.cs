@@ -12,6 +12,7 @@
 // </copyright>
 // <summary>The bot media stream.</summary>
 // ***********************************************************************-
+using AITeamAssistant.Action;
 using API.Services.Interfaces;
 using EchoBot.Media;
 using EchoBot.Util;
@@ -53,6 +54,7 @@ namespace EchoBot.Bot
         private int shutdown;
         private readonly SpeechService _languageService;
         private readonly IOpenAIService _openAIService;
+        private readonly IConfiguration _configuration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BotMediaStream" /> class.
@@ -69,7 +71,8 @@ namespace EchoBot.Bot
             IGraphLogger graphLogger,
             ILogger logger,
             AppSettings settings,
-            IOpenAIService openAIService
+            IOpenAIService openAIService,
+            IConfiguration configuration
         )
             : base(graphLogger)
         {
@@ -77,6 +80,7 @@ namespace EchoBot.Bot
             ArgumentVerifier.ThrowOnNullArgument(logger, nameof(logger));
             ArgumentVerifier.ThrowOnNullArgument(settings, nameof(settings));
 
+            _configuration = configuration;
             _openAIService = openAIService;
             _settings = settings;
             _logger = logger;
@@ -101,7 +105,7 @@ namespace EchoBot.Bot
 
             if (_settings.UseSpeechService)
             {
-                _languageService = new SpeechService(_settings, _logger, _openAIService);
+                _languageService = new SpeechService(_settings, _logger, _openAIService, _configuration);
                 _languageService.SendMediaBuffer += this.OnSendMediaBuffer;
             }
         }

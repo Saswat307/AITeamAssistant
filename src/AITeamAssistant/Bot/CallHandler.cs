@@ -37,7 +37,8 @@ namespace EchoBot.Bot
             ICall statefulCall,
             AppSettings settings,
             ILogger logger,
-            IOpenAIService openAIService
+            IOpenAIService openAIService,
+            IConfiguration configuration
         )
             : base(TimeSpan.FromMinutes(10), statefulCall?.GraphLogger)
         {
@@ -45,7 +46,7 @@ namespace EchoBot.Bot
             this.Call.OnUpdated += this.CallOnUpdated;
             this.Call.Participants.OnUpdated += this.ParticipantsOnUpdated;
 
-            this.BotMediaStream = new BotMediaStream(this.Call.GetLocalMediaSession(), this.Call.Id, this.GraphLogger, logger, settings, openAIService);
+            this.BotMediaStream = new BotMediaStream(this.Call.GetLocalMediaSession(), this.Call.Id, this.GraphLogger, logger, settings, openAIService, configuration);
         }
 
         /// <inheritdoc/>

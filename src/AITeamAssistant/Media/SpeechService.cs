@@ -1,6 +1,8 @@
-﻿using API.Services.Interfaces;
+﻿using AITeamAssistant.Action;
+using API.Services.Interfaces;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
+using Microsoft.Graph.Communications.Common;
 using Microsoft.Skype.Bots.Media;
 using OpenAI.Chat;
 using System.Runtime.InteropServices;
@@ -43,10 +45,13 @@ namespace EchoBot.Media
         
         private List<ChatMessage> meetingConversation = new List<ChatMessage>();
 
+        private ActionDispatcher actionDispatcher;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SpeechService" /> class.
-        public SpeechService(AppSettings settings, ILogger logger, IOpenAIService openAIService)
+        public SpeechService(AppSettings settings, ILogger logger, IOpenAIService openAIService, IConfiguration configuration)
         {
+            this.actionDispatcher = new ActionDispatcher(openAIService, configuration);
             _openAIService = openAIService;
             _logger = logger;
 
@@ -270,15 +275,26 @@ namespace EchoBot.Media
             if (!string.IsNullOrEmpty(foundEmployee))
             {
                 _logger.LogInformation("Employee Name found " + foundEmployee);
-                string question = lastMessage;
+                
+                string questionPrompt = lastMessage;
                 string recentConversation = GetRecentConversation();
                 ClearRecentConversation();
                 meetingConversation.Add(new UserChatMessage(recentConversation));
-                meetingConversation.Add(new UserChatMessage(question));
-                var response = _openAIService.Ask(meetingConversation);
+                meetingConversation.Add(new UserChatMessage(questionPrompt));
 
-                meetingConversation.Add(new AssistantChatMessage(response));
-                
+                var action = await _openAIService.DetectActionFromPrompt(questionPrompt, actionDispatcher.GetActionNames());
+
+                var response = string.Empty;
+                if (ActionDispatcher.NoActionFound.EqualsIgnoreCase(action)) {
+                    response = await _openAIService.Ask(meetingConversation);
+                    meetingConversation.Add(new AssistantChatMessage(response));
+                } else
+                {
+                    var chatMessageCopy = meetingConversation.ToList();
+                    var actionResponse = await actionDispatcher.DispatchActionAsync(action, chatMessageCopy);
+                    response = actionResponse.AudioResponse;
+                    meetingConversation.Add(new UserChatMessage(response));
+                }
                 await TextToSpeech(response);
             }
             else
@@ -287,5 +303,7 @@ namespace EchoBot.Media
                 AppendConversation(lastMessage);
             }
         }
+
+       
     }
 }
