@@ -1,4 +1,5 @@
-﻿using Azure;
+﻿using AITeamAssistant.Action;
+using Azure;
 using Azure.AI.OpenAI;
 using OpenAI.Chat;
 
@@ -10,6 +11,19 @@ namespace AITeamAssistant.Service
     "In meetings, your responses will be used as audio output, so keep your answers brief and clear. " +
     "Respond concisely, ideally under 200 words. If the question is unclear or you don’t know the answer, politely say you don’t know. " +
     "Focus on straightforward and helpful responses, avoiding unnecessary details to ensure compatibility with audio channels.";
+
+        private string ActionDetectSystemPromptTemplate =
+            @$"You are an intelligent assistant. Your job is to analyze the input prompt and determine if the user is asking to perform any action. " +
+            "Available actions are: [{0}]. " +
+            "If the prompt asks for one of these actions, return the action name only. " +
+            "If the prompt does not ask for any of the actions, return 'NO_ACTION'.";
+
+        private string ADOActionPromptTemplate =
+            "You are an AI assistant, and your task is to create one or more actionable Azure DevOps (ADO) work items. " +
+            "Each work item should be clear, concise, and specific, detailing the task to be performed." +
+            " Ensure that each work item includes a title and a brief description, and the output should be in the following format" +
+            "{0} ."+
+            "The output must be a JSON array, and no extra lines or content should be added, as it will be directly parsed as JSON.";
 
         private readonly IConfiguration _configuration;
         private readonly ChatClient chatClient;
@@ -30,7 +44,7 @@ namespace AITeamAssistant.Service
             chatClient = azureClient.GetChatClient(modelFromEnvironment);
         }
 
-        public string Ask(string question)
+        public async Task<string> Ask(string question)
         {
             _logger.LogInformation("Question " + question);
             List<ChatMessage> chatMessages = new List<ChatMessage>()
@@ -39,12 +53,12 @@ namespace AITeamAssistant.Service
                 new UserChatMessage(question),
             };
 
-            ChatCompletion completion = chatClient.CompleteChat(chatMessages);
+            ChatCompletion completion = await chatClient.CompleteChatAsync(chatMessages);
             _logger.LogInformation("Answer " + completion.Content[0].Text);
             return completion.Content[0].Text;
         }
 
-        public string Ask(List<ChatMessage> chatMessages)
+        public async Task<string> Ask(List<ChatMessage> chatMessages)
         {
 
             ChatMessage systemMessage = chatMessages[0];
@@ -54,6 +68,74 @@ namespace AITeamAssistant.Service
                 chatMessages.Insert(0, new SystemChatMessage(SystemMessage));
             }
 
+            PrintChatMessages(chatMessages);
+
+            ChatCompletion completion = await chatClient.CompleteChatAsync(chatMessages);
+
+            _logger.LogInformation("Chat Answer " + completion.Content[0].Text);
+            return completion.Content[0].Text;
+        }
+
+        public async Task<string> DetectActionFromPrompt(string inputPrompt, List<string> implementedActions)
+        {
+            _logger.LogInformation("Input Prompt to Detect Action - " + inputPrompt);
+            // Get the list of actions dynamically
+
+            var implemptedActionNames = string.Join(", ", implementedActions);
+
+            string actionDetectionPrompt = string.Format(ActionDetectSystemPromptTemplate, implemptedActionNames);
+
+            List<ChatMessage> chatMessages = new List<ChatMessage>()
+            {
+                new SystemChatMessage(actionDetectionPrompt),
+                new UserChatMessage(inputPrompt)
+            };
+
+            PrintChatMessages(chatMessages); 
+
+            ChatCompletion completion = await chatClient.CompleteChatAsync(chatMessages);
+            
+            if(completion != null && completion.Content.Count > 0)
+            {
+                _logger.LogInformation("Detected Action -" + completion.Content[0].Text);
+                string action = completion.Content[0].Text.Trim();
+
+                if (implementedActions.Contains(action))
+                {
+                    return action;
+                }
+            }
+            
+
+            return ActionDispatcher.NoActionFound;
+        }
+
+        public async Task<string> GatherActionParametersFromConversation(List<ChatMessage> chatMessages, string format, string userPrompt)
+        {
+            _logger.LogInformation("Gather Action Parameters from Conversation");
+            string actionParameterPrompt = string.Format(ADOActionPromptTemplate, format);
+
+            /*ChatMessage systemMessage = chatMessages[0];
+            if (systemMessage is SystemChatMessage)
+            {
+                _logger.LogInformation("Removing if any existing System Message");
+                chatMessages.Insert(0, new SystemChatMessage(actionParameterPrompt));
+            }*/
+
+            /*chatMessages.Insert(0, new SystemChatMessage(actionParameterPrompt));
+*/
+            chatMessages.Insert(chatMessages.Count-1, new SystemChatMessage(actionParameterPrompt));
+            
+            PrintChatMessages(chatMessages);
+
+            ChatCompletion completion = await chatClient.CompleteChatAsync(chatMessages);
+            string parameterString = completion.Content[0].Text.Trim();
+            _logger.LogInformation("Action Parameters Output - " + parameterString);
+            return parameterString;
+        }
+
+        private void PrintChatMessages(List<ChatMessage> chatMessages)
+        {
             foreach (var chatMessage in chatMessages)
             {
                 if (chatMessage.Content.Count > 0)
@@ -76,11 +158,6 @@ namespace AITeamAssistant.Service
                     }
                 }
             }
-
-            ChatCompletion completion = chatClient.CompleteChat(chatMessages);
-
-            _logger.LogInformation("Chat Answer " + completion.Content[0].Text);
-            return completion.Content[0].Text;
         }
     }
 }

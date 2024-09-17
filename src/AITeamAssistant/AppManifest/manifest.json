@@ -11,16 +11,16 @@
     "termsOfUseUrl": "https://teams.microsoft.com"
   },
   "icons": {
-    "color": "color.png",
+    "color": "mayadp.png",
     "outline": "outline.png"
   },
   "name": {
-    "short": "StarkEmployee",
-    "full": "StarkEmployee"
+    "short": "Maya(AI)",
+    "full": "Maya(AI)"
   },
   "description": {
-    "short": "StarkEmployee bot",
-    "full": "StarkEmployee bot"
+    "short": "AI Employee Assistant",
+    "full": "AI Employee Assistant"
   },
   "accentColor": "#FFFFFF",
   "bots": [

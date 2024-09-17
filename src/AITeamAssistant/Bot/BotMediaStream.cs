@@ -54,6 +54,7 @@ namespace AITeamAssistant.Bot
         private readonly SpeechService _languageService;
         private readonly IOpenAIService _openAIService;
         private readonly IPromptFlowService promptFlowService;
+        private readonly IConfiguration _configuration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BotMediaStream" /> class.
@@ -71,7 +72,8 @@ namespace AITeamAssistant.Bot
             ILogger logger,
             AppSettings settings,
             IOpenAIService openAIService,
-            IPromptFlowService promptFlowService
+            IPromptFlowService promptFlowService,
+            IConfiguration configuration
         )
             : base(graphLogger)
         {
@@ -79,6 +81,7 @@ namespace AITeamAssistant.Bot
             ArgumentVerifier.ThrowOnNullArgument(logger, nameof(logger));
             ArgumentVerifier.ThrowOnNullArgument(settings, nameof(settings));
 
+            _configuration = configuration;
             _openAIService = openAIService;
             _settings = settings;
             _logger = logger;
@@ -103,7 +106,7 @@ namespace AITeamAssistant.Bot
 
             if (_settings.UseSpeechService)
             {
-                _languageService = new SpeechService(_settings, _logger, _openAIService, promptFlowService);
+                _languageService = new SpeechService(_settings, _logger, _openAIService, promptFlowService, _configuration);
                 _languageService.SendMediaBuffer += this.OnSendMediaBuffer;
             }
         }

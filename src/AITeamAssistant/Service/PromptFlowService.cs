@@ -56,14 +56,34 @@ namespace AITeamAssistant.Service
     public class PromptFlowService : IPromptFlowService
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger<PromptFlowService> _logger;
 
-        public PromptFlowService(IHttpClientFactory httpClientFactory)
+        public PromptFlowService(IHttpClientFactory httpClientFactory, ILogger<PromptFlowService> logger)
         {
+            _logger = logger;
             _httpClient = httpClientFactory.CreateClient("AzurePromptFlowClient");
         }
 
         public async Task<string> GetResponseAsync(string chat_input, ChatHistory chat_history)
         {
+            _logger.LogInformation("PromptFlow Chat Input " + chat_input);
+
+            foreach(var interaction in chat_history.Interactions)
+            {
+                _logger.LogInformation("--------------------------------------");
+
+                if (interaction.Inputs != null && interaction.Inputs.ChatInput != null)
+                {
+                    _logger.LogInformation("Input -  " + interaction.Inputs.ChatInput);
+                }
+                if(interaction.Outputs != null && interaction.Outputs.ChatOutput != null)
+                {
+                    _logger.LogInformation("Output -  " + interaction.Outputs.ChatOutput);
+                }
+                
+            }
+            _logger.LogInformation("--------------------------------------");
+
             var requestBody = new StringContent(JsonConvert.SerializeObject(new PromptInput( chat_input, chat_history.Interactions )), Encoding.UTF8, "application/json");
             requestBody.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 

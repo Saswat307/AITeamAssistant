@@ -77,7 +77,8 @@ namespace AITeamAssistant.Bot
         /// <value>The client.</value>
         public ICommunicationsClient Client { get; private set; }
 
-        public IOpenAIService OpenAIService { get; }
+        public IOpenAIService _openAIService { get; }
+        public IConfiguration _configuration;
 
         public IPromptFlowService PromptFlowService { get; }
 
@@ -103,14 +104,16 @@ namespace AITeamAssistant.Bot
             IOptions<AppSettings> settings,
             IBotMediaLogger mediaLogger,
             IOpenAIService openAIService,
-            IPromptFlowService promptFlowService)
+            IPromptFlowService promptFlowService,
+            IConfiguration configuration)
         {
-            OpenAIService = openAIService;
+            _openAIService = openAIService;
             _graphLogger = graphLogger;
             _logger = logger;
             _settings = settings.Value;
             _mediaPlatformLogger = mediaLogger;
             this.PromptFlowService = promptFlowService;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -330,7 +333,7 @@ namespace AITeamAssistant.Bot
         {
             foreach (var call in args.AddedResources)
             {
-                var callHandler = new CallHandler(call, _settings, _logger, OpenAIService, PromptFlowService);
+                var callHandler = new CallHandler(call, _settings, _logger, _openAIService, PromptFlowService, _configuration);
                 var threadId = call.Resource.ChatInfo.ThreadId;
                 // var callId = call.Resource.CallChainId;
                 CallHandlers[threadId] = callHandler;

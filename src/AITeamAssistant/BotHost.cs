@@ -29,6 +29,7 @@ using Microsoft.Bot.Schema.Teams;
 using Microsoft.Graph;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using System.Net.Http.Headers;
+using AITeamAssistant.Action;
 
 namespace AITeamAssistant
 {
@@ -153,6 +154,8 @@ namespace AITeamAssistant
             builder.Services.AddSingleton<IBotService, BotService>();
             builder.Services.AddSingleton<IOpenAIService, OpenAIService>();
             
+            builder.Services.AddSingleton<ActionDispatcher, ActionDispatcher>();
+
             // Bot Settings Setup
             var botInternalHostingProtocol = "https";
             if (appSettings.UseLocalDevSettings)
