@@ -29,8 +29,6 @@ using Microsoft.Bot.Schema.Teams;
 using Microsoft.Graph;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using System.Net.Http.Headers;
-using API.Services.Interfaces;
-using API.Services;
 using AITeamAssistant.Action;
 
 namespace AITeamAssistant

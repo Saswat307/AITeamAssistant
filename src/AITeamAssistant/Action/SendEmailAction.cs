@@ -12,7 +12,7 @@ namespace AITeamAssistant.Action
 
         public async Task<ActionResponse> ExecuteAsync(Dictionary<string, object> parameters)
         {
-            string subject;
+           /* string subject;
             if (!parameters.TryGetValue("subject", out var subjectValue) || string.IsNullOrEmpty(subjectValue?.ToString()))
             {
                 subject = "Default Mail Subject"; // Provide a default value
@@ -20,7 +20,7 @@ namespace AITeamAssistant.Action
             else
             {
                 subject = subjectValue.ToString();
-            }
+            }*/
 
 
 //            var message = parameters["message"].ToString();
@@ -28,8 +28,8 @@ namespace AITeamAssistant.Action
 
             return new ActionResponse
             {
-                AudioResponse = $"Email sent -  {subject}",
-                TextResponse = $"Email sent -  {subject}"
+                AudioResponse = $"Email sent. Please check your inbox.",
+                TextResponse = $"Email sent. Please check your inbox."
             };
             
         }

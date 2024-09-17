@@ -15,10 +15,6 @@
 using AITeamAssistant.Media;
 using AITeamAssistant.Service;
 using AITeamAssistant.Util;
-using AITeamAssistant.Action;
-using API.Services.Interfaces;
-using EchoBot.Media;
-using EchoBot.Util;
 using Microsoft.Graph.Communications.Calls;
 using Microsoft.Graph.Communications.Calls.Media;
 using Microsoft.Graph.Communications.Common;
@@ -76,8 +72,7 @@ namespace AITeamAssistant.Bot
             ILogger logger,
             AppSettings settings,
             IOpenAIService openAIService,
-            IPromptFlowService promptFlowService
-            IOpenAIService openAIService,
+            IPromptFlowService promptFlowService,
             IConfiguration configuration
         )
             : base(graphLogger)
@@ -111,8 +106,7 @@ namespace AITeamAssistant.Bot
 
             if (_settings.UseSpeechService)
             {
-                _languageService = new SpeechService(_settings, _logger, _openAIService, promptFlowService);
-                _languageService = new SpeechService(_settings, _logger, _openAIService, _configuration);
+                _languageService = new SpeechService(_settings, _logger, _openAIService, promptFlowService, _configuration);
                 _languageService.SendMediaBuffer += this.OnSendMediaBuffer;
             }
         }

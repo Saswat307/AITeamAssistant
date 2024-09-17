@@ -1,4 +1,5 @@
-﻿using Azure;
+﻿using AITeamAssistant.Action;
+using Azure;
 using Azure.AI.OpenAI;
 using OpenAI.Chat;
 
@@ -21,7 +22,8 @@ namespace AITeamAssistant.Service
             "You are an AI assistant, and your task is to create one or more actionable Azure DevOps (ADO) work items. " +
             "Each work item should be clear, concise, and specific, detailing the task to be performed." +
             " Ensure that each work item includes a title and a brief description, and the output should be in the following format" +
-            "{0}";
+            "{0} ."+
+            "The output must be a JSON array, and no extra lines or content should be added, as it will be directly parsed as JSON.";
 
         private readonly IConfiguration _configuration;
         private readonly ChatClient chatClient;
@@ -56,7 +58,7 @@ namespace AITeamAssistant.Service
             return completion.Content[0].Text;
         }
 
-        public string Ask(List<ChatMessage> chatMessages)
+        public async Task<string> Ask(List<ChatMessage> chatMessages)
         {
 
             ChatMessage systemMessage = chatMessages[0];
@@ -66,28 +68,7 @@ namespace AITeamAssistant.Service
                 chatMessages.Insert(0, new SystemChatMessage(SystemMessage));
             }
 
-            foreach (var chatMessage in chatMessages)
-            {
-                if (chatMessage.Content.Count > 0)
-                {
-
-                    // Check if the message is from a user
-                    if (chatMessage is UserChatMessage userChatMessage)
-                    {
-                        _logger.LogInformation("User Message: " + userChatMessage.Content[0]);
-                    }
-                    // Check if the message is from the system
-                    else if (chatMessage is SystemChatMessage systemChatMessage)
-                    {
-                        _logger.LogInformation("System Message: " + systemChatMessage.Content[0]);
-                    }
-                    // You can add additional roles if necessary (e.g., assistant messages)
-                    else if (chatMessage is AssistantChatMessage assistantChatMessage)
-                    {
-                        _logger.LogInformation("Assistant Message: " + assistantChatMessage.Content[0]);
-                    }
-                }
-            }
+            PrintChatMessages(chatMessages);
 
             ChatCompletion completion = await chatClient.CompleteChatAsync(chatMessages);
 
@@ -110,34 +91,73 @@ namespace AITeamAssistant.Service
                 new UserChatMessage(inputPrompt)
             };
 
-            ChatCompletion completion = await chatClient.CompleteChatAsync(chatMessages);
-            _logger.LogInformation("Detected Action -" + completion.Content[0].Text);
-            string action = completion.Content[0].Text.Trim();
+            PrintChatMessages(chatMessages); 
 
-            if(implementedActions.Contains(action))
+            ChatCompletion completion = await chatClient.CompleteChatAsync(chatMessages);
+            
+            if(completion != null && completion.Content.Count > 0)
             {
-                return action;
+                _logger.LogInformation("Detected Action -" + completion.Content[0].Text);
+                string action = completion.Content[0].Text.Trim();
+
+                if (implementedActions.Contains(action))
+                {
+                    return action;
+                }
             }
+            
 
             return ActionDispatcher.NoActionFound;
         }
 
         public async Task<string> GatherActionParametersFromConversation(List<ChatMessage> chatMessages, string format, string userPrompt)
         {
-
+            _logger.LogInformation("Gather Action Parameters from Conversation");
             string actionParameterPrompt = string.Format(ADOActionPromptTemplate, format);
 
-            ChatMessage systemMessage = chatMessages[0];
+            /*ChatMessage systemMessage = chatMessages[0];
             if (systemMessage is SystemChatMessage)
             {
                 _logger.LogInformation("Removing if any existing System Message");
                 chatMessages.Insert(0, new SystemChatMessage(actionParameterPrompt));
-            }
-            chatMessages.Insert(0, new SystemChatMessage(actionParameterPrompt));
+            }*/
+
+            /*chatMessages.Insert(0, new SystemChatMessage(actionParameterPrompt));
+*/
+            chatMessages.Insert(chatMessages.Count-1, new SystemChatMessage(actionParameterPrompt));
+            
+            PrintChatMessages(chatMessages);
+
             ChatCompletion completion = await chatClient.CompleteChatAsync(chatMessages);
             string parameterString = completion.Content[0].Text.Trim();
-
+            _logger.LogInformation("Action Parameters Output - " + parameterString);
             return parameterString;
+        }
+
+        private void PrintChatMessages(List<ChatMessage> chatMessages)
+        {
+            foreach (var chatMessage in chatMessages)
+            {
+                if (chatMessage.Content.Count > 0)
+                {
+
+                    // Check if the message is from a user
+                    if (chatMessage is UserChatMessage userChatMessage)
+                    {
+                        _logger.LogInformation("User Message: " + userChatMessage.Content[0]);
+                    }
+                    // Check if the message is from the system
+                    else if (chatMessage is SystemChatMessage systemChatMessage)
+                    {
+                        _logger.LogInformation("System Message: " + systemChatMessage.Content[0]);
+                    }
+                    // You can add additional roles if necessary (e.g., assistant messages)
+                    else if (chatMessage is AssistantChatMessage assistantChatMessage)
+                    {
+                        _logger.LogInformation("Assistant Message: " + assistantChatMessage.Content[0]);
+                    }
+                }
+            }
         }
     }
 }

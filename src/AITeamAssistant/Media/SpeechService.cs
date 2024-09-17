@@ -1,6 +1,5 @@
 ﻿using AITeamAssistant.Service;
 using AITeamAssistant.Action;
-using API.Services.Interfaces;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
 using Microsoft.Graph.Communications.Common;
@@ -20,17 +19,17 @@ namespace AITeamAssistant.Media
 
         private readonly string[] botNameVariations =
                                 {
-                                    "Maya", "Maya,", "Maya.",
-                                    "Mya", "Mya,", "Mya.",
-                                    "Mia", "Mia,", "Mia.",
-                                    "May", "May,", "May.",
-                                    "Meya", "Meya,", "Meya.",
-                                    "Miya", "Miya,", "Miya.",
-                                    "Miah", "Miah,", "Miah.",
-                                    "Maia", "Maia,", "Maia.",
-                                    "Meya", "Meya,", "Meya.",
-                                    "Miya", "Miya,", "Miya.",
-                                    "Meya", "Meya,", "Meya."
+                                    "Maya", "Maya,", "Maya.", "Maya?",
+                                    "Mya", "Mya,", "Mya.","Mya?",
+                                    "Mia", "Mia,", "Mia.","Mia?",
+                                    "May", "May,", "May.","May?",
+                                    "Meya", "Meya,", "Meya.","Meya?",
+                                    "Miya", "Miya,", "Miya.","Miya?",
+                                    "Miah", "Miah,", "Miah.","Miah?",
+                                    "Maia", "Maia,", "Maia.","Maia?",
+                                    "Meya", "Meya,", "Meya.","Meya?",
+                                    "Miya", "Miya,", "Miya.","Miya?",
+                                    "Meya", "Meya,", "Meya.","Meya?"
                                 };
         /// <summary>
         /// The is the indicator if the media stream is running
@@ -69,8 +68,7 @@ namespace AITeamAssistant.Media
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SpeechService" /> class.
-        public SpeechService(AppSettings settings, ILogger logger, IOpenAIService openAIService, IPromptFlowService promptFlowService)
-        public SpeechService(AppSettings settings, ILogger logger, IOpenAIService openAIService, IConfiguration configuration)
+        public SpeechService(AppSettings settings, ILogger logger, IOpenAIService openAIService, IPromptFlowService promptFlowService, IConfiguration configuration)
         {
             this.actionDispatcher = new ActionDispatcher(openAIService, configuration);
             _openAIService = openAIService;
@@ -301,34 +299,25 @@ namespace AITeamAssistant.Media
                 string recentConversation = GetRecentConversation();
                 ClearRecentConversation();
 
-                var response = await promptFlowService.GetResponseAsync(question, chatHistory);
                 meetingConversation.Add(new UserChatMessage(recentConversation));
                 meetingConversation.Add(new UserChatMessage(questionPrompt));
 
+                chatHistory.Interactions.Add(new ChatInteraction()
+                {
+                    Inputs = new()
+                    {
+                        ChatInput = recentConversation
+                    }
+                });
+
                 var action = await _openAIService.DetectActionFromPrompt(questionPrompt, actionDispatcher.GetActionNames());
 
-                try
-                {
-                    chatHistory.Interactions.Add(new ChatInteraction()
-                    {
-                        Inputs = new()
-                        {
-                            ChatInput = question
-                        },
-                        Outputs = new()
-                        {
-                            ChatOutput = response
-                        }
-                    });
-                }
-                catch(Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-
+               
                 var response = string.Empty;
                 if (ActionDispatcher.NoActionFound.EqualsIgnoreCase(action)) {
-                    response = await _openAIService.Ask(meetingConversation);
+                    //response = await _openAIService.Ask(meetingConversation);
+                    
+                    response = await promptFlowService.GetResponseAsync(questionPrompt, chatHistory);
                     meetingConversation.Add(new AssistantChatMessage(response));
                 } else
                 {
@@ -336,6 +325,25 @@ namespace AITeamAssistant.Media
                     var actionResponse = await actionDispatcher.DispatchActionAsync(action, chatMessageCopy);
                     response = actionResponse.AudioResponse;
                     meetingConversation.Add(new UserChatMessage(response));
+                }
+
+                try
+                {
+                    chatHistory.Interactions.Add(new ChatInteraction()
+                    {
+                        Inputs = new()
+                        {
+                            ChatInput = questionPrompt
+                        },
+                        Outputs = new()
+                        {
+                            ChatOutput = response
+                        }
+                    });
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
                 }
                 await TextToSpeech(response);
             } else

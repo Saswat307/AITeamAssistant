@@ -37,8 +37,7 @@ namespace AITeamAssistant.Bot
             AppSettings settings,
             ILogger logger,
             IOpenAIService openAIService,
-            IPromptFlowService promptFlowService
-            IOpenAIService openAIService,
+            IPromptFlowService promptFlowService,
             IConfiguration configuration
         )
             : base(TimeSpan.FromMinutes(10), statefulCall?.GraphLogger)
@@ -47,7 +46,7 @@ namespace AITeamAssistant.Bot
             Call.OnUpdated += CallOnUpdated;
             Call.Participants.OnUpdated += ParticipantsOnUpdated;
 
-            this.BotMediaStream = new BotMediaStream(this.Call.GetLocalMediaSession(), this.Call.Id, this.GraphLogger, logger, settings, openAIService, configuration);
+            this.BotMediaStream = new BotMediaStream(this.Call.GetLocalMediaSession(), this.Call.Id, this.GraphLogger, logger, settings, openAIService, promptFlowService, configuration);
         }
 
         /// <inheritdoc/>

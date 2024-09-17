@@ -88,14 +88,13 @@ namespace AITeamAssistant.Action
             // Extract the organization and project name from the URL
             string[] segments = uri.Segments;
 
-            if (segments.Length < 8)
+            if (segments.Length < 7)
                 throw new ArgumentException("The URL format is incorrect.");
 
-            string organization = segments[2].TrimEnd('/');
-            string workItemId = segments[7].TrimEnd('/');
+            string workItemId = segments[6].TrimEnd('/');
 
             // Step 2: Format the new URL
-            string newUrl = $"https://dev.azure.com/{organization}/{organization}/_workitems/edit/{workItemId}";
+            string newUrl = $"https://dev.azure.com/tictactec/tictactech/_workitems/edit/{workItemId}";
 
             return newUrl;
         }

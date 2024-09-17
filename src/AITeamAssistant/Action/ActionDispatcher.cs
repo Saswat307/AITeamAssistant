@@ -1,6 +1,5 @@
 ﻿
-using API.Services.Interfaces;
-using Microsoft.Graph.Reports.GetPrinterArchivedPrintJobsWithPrinterIdWithStartDateTimeWithEndDateTime;
+using AITeamAssistant.Service;
 using Newtonsoft.Json.Linq;
 using OpenAI.Chat;
 using System.Text;
@@ -20,12 +19,17 @@ namespace AITeamAssistant.Action
 
         private List<string> FetchActions()
         {
-            var actionType = typeof(IAction);
+           /* var actionType = typeof(IAction);
             var actionNames = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(s => s.GetTypes())
                 .Where(p => actionType.IsAssignableFrom(p) && !p.IsAbstract && !p.IsInterface)
                 .Select(t => t.Name.Replace("Action", ""))
-                .ToList();
+                .ToList();*/
+            List<string> actionNames = new List<string>
+            {
+                "SendEmail",
+                "CreateADOTask"
+            };
 
             return actionNames;
         }
@@ -54,6 +58,7 @@ namespace AITeamAssistant.Action
 
         public async Task<ActionResponse> DispatchActionAsync(string actionName,List<ChatMessage> chatMessages)
         {
+            
             IAction detectedAction = null;
             if (_actionsMap.TryGetValue(actionName, out var action))
             {
@@ -75,8 +80,6 @@ namespace AITeamAssistant.Action
         private async Task<List<Dictionary<string, object>>> GatherParametersForAction(IAction detectedAction, List<ChatMessage> chatMessages)
         {
             List<ChatMessage> chatMessagesCopy = chatMessages.ToList();
-
-            
             var paramterString =  await _openAIService.GatherActionParametersFromConversation(chatMessages, detectedAction.GetActionTemplate(), detectedAction.GetLLMPrompt());
             List<Dictionary<string, object>> parameters = ParseParameterString(paramterString);
 
@@ -134,10 +137,11 @@ namespace AITeamAssistant.Action
             // Prepare the TextResponse
             StringBuilder textSummary = new StringBuilder();
             textSummary.AppendLine($"Below {taskCount} task{(taskCount > 1 ? "s have" : " has")} been created:");
-
+            
             // Append details of each task
             for (int i = 0; i < responses.Count; i++)
             {
+                textSummary.AppendLine();
                 textSummary.AppendLine($"{i + 1} - {responses[i].TextResponse}");
             }
 
