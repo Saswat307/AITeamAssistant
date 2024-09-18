@@ -13,6 +13,7 @@
 // ***********************************************************************
 using AdaptiveCards;
 using AITeamAssistant.Bot;
+using AITeamAssistant.Client;
 using AITeamAssistant.Models;
 using AITeamAssistant.Service;
 using AITeamAssistant.Util;
@@ -27,6 +28,7 @@ using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Bot.Schema;
 using Microsoft.Bot.Schema.Teams;
 using Microsoft.Graph;
+using Microsoft.Graph.Communications.Client;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using System.Net.Http.Headers;
 
@@ -54,7 +56,7 @@ namespace AITeamAssistant
         /// Starting the Bot and Web App
         /// </summary>
         /// <returns></returns>
-        public async Task StartAsync()
+        public async Task StartAsync(CallClient callClient)
         {
             _logger.LogInformation("Starting the AI Team Assistant");
             // Set up the bot web application
@@ -85,10 +87,11 @@ namespace AITeamAssistant
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-
             var promptFlowModel = builder.Configuration["PromptFlow:ModelName"];
             var promptFlowSecret = builder.Configuration["PromptFlow:Secret"];
             var promptFlowEndpoint = builder.Configuration["PromptFlow:Endpoint"];
+            // Create CallClient;
+            builder.Services.AddSingleton((_) => callClient);
 
             builder.Services.AddHttpClient("AzurePromptFlowClient", client =>
             {
@@ -97,45 +100,10 @@ namespace AITeamAssistant
                 client.DefaultRequestHeaders.Add("azureml-model-deployment", promptFlowModel);
             });
 
-            builder.Services.AddSingleton<GraphServiceClient>( (_) =>
-            {
-                var scopes = new[] { "User.Read" };
-
-                // Multi-tenant apps can use "common",
-                // single-tenant apps must use the tenant ID from the Azure portal
-                var tenantId = "common";
-
-                // Value from app registration
-                var clientId = appSettings.AadAppId;
-
-                // using Azure.Identity;
-                var options = new DeviceCodeCredentialOptions
-                {
-                    AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
-                    ClientId = clientId,
-                    TenantId = tenantId,
-                    // Callback function that receives the user prompt
-                    // Prompt contains the generated device code that user must
-                    // enter during the auth process in the browser
-                    DeviceCodeCallback = (code, cancellation) =>
-                    {
-                        Console.WriteLine(code.Message);
-                        return Task.FromResult(0);
-                    },
-                };
-
-                // https://learn.microsoft.com/dotnet/api/azure.identity.devicecodecredential
-                var deviceCodeCredential = new DeviceCodeCredential(options);
-
-                return new GraphServiceClient(deviceCodeCredential, scopes);
-            });
-
             // Create the Bot Framework Authentication to be used with the Bot Adapter.
             builder.Services.AddSingleton<BotFrameworkAuthentication, ConfigurationBotFrameworkAuthentication>();
 
             builder.Services.AddSingleton<IPromptFlowService, PromptFlowService>();
-
-            builder.Services.AddSingleton<IMeetingService, MeetingService>();
 
             // Create the Bot Adapter with error handling enabled.
             builder.Services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
@@ -220,6 +188,7 @@ namespace AITeamAssistant
 
             _app.MapControllers();
 
+            _logger.LogInformation("AI Assistant Running");
             await _app.RunAsync();
         }
 

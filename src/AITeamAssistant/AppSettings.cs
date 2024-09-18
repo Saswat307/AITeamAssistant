@@ -4,6 +4,8 @@ namespace AITeamAssistant
 {
     public class AppSettings
     {
+
+        public string TenantId { get; set; }
         /// <summary>
         /// Gets or sets the name of the service DNS.
         /// </summary>

@@ -32,7 +32,7 @@ using Microsoft.Skype.Bots.Media;
 using System.Collections.Concurrent;
 using System.Net;
 using AdaptiveCards;
-using Attachment = Microsoft.Bot.Schema.Attachment;
+using AITeamAssistant.Client;
 
 namespace AITeamAssistant.Bot
 {
@@ -45,6 +45,8 @@ namespace AITeamAssistant.Bot
     /// <seealso cref="IBotService" />
     public class BotService : IDisposable, IBotService
     {
+        private CallClient callClient;
+       
         /// <summary>
         /// The Graph logger
         /// </summary>
@@ -98,6 +100,7 @@ namespace AITeamAssistant.Bot
         /// <param name="settings"></param>
         /// <param name="mediaLogger"></param>
         public BotService(
+            CallClient callClient,
             IGraphLogger graphLogger,
             ILogger<BotService> logger,
             IOptions<AppSettings> settings,
@@ -105,6 +108,7 @@ namespace AITeamAssistant.Bot
             IOpenAIService openAIService,
             IPromptFlowService promptFlowService)
         {
+            this.callClient = callClient;
             OpenAIService = openAIService;
             _graphLogger = graphLogger;
             _logger = logger;
@@ -119,7 +123,7 @@ namespace AITeamAssistant.Bot
         public void Initialize()
         {
             _logger.LogInformation("Initializing Bot Service");
-            var name = GetType().Assembly.GetName().Name;
+           /* var name = GetType().Assembly.GetName().Name;
             var builder = new CommunicationsClientBuilder(
                 name,
                 _settings.AadAppId,
@@ -155,7 +159,7 @@ namespace AITeamAssistant.Bot
 
             Client = builder.Build();
             Client.Calls().OnIncoming += CallsOnIncoming;
-            Client.Calls().OnUpdated += CallsOnUpdated;
+            Client.Calls().OnUpdated += CallsOnUpdated;*/
         }
 
         /// <summary>
@@ -201,41 +205,43 @@ namespace AITeamAssistant.Bot
         /// <returns>The <see cref="ICall" /> that was requested to join.</returns>
         public async Task<ICall> JoinCallAsync(JoinCallBody joinCallBody)
         {
-            // A tracking id for logging purposes. Helps identify this call in logs.
-            var scenarioId = Guid.NewGuid();
+            //// A tracking id for logging purposes. Helps identify this call in logs.
+            //var scenarioId = Guid.NewGuid();
 
-            var (chatInfo, meetingInfo) = JoinInfo.ParseJoinURL(joinCallBody.JoinUrl);
+            //var (chatInfo, meetingInfo) = JoinInfo.ParseJoinURL(joinCallBody.JoinUrl);
 
-            var tenantId = (meetingInfo as OrganizerMeetingInfo).Organizer.GetPrimaryIdentity().GetTenantId();
-            var mediaSession = CreateLocalMediaSession();
+            //var tenantId = (meetingInfo as OrganizerMeetingInfo).Organizer.GetPrimaryIdentity().GetTenantId();
+            //var mediaSession = CreateLocalMediaSession();
 
-            var joinParams = new JoinMeetingParameters(chatInfo, meetingInfo, mediaSession)
-            {
-                TenantId = tenantId,
-            };
+            //var joinParams = new JoinMeetingParameters(chatInfo, meetingInfo, mediaSession)
+            //{
+            //    TenantId = tenantId,
+            //};
 
-            if (!string.IsNullOrWhiteSpace(joinCallBody.DisplayName))
-            {
-                // Teams client does not allow changing of ones own display name.
-                // If display name is specified, we join as anonymous (guest) user
-                // with the specified display name.  This will put bot into lobby
-                // unless lobby bypass is disabled.
-                joinParams.GuestIdentity = new Identity
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    DisplayName = joinCallBody.DisplayName,
-                };
-            }
+            //if (!string.IsNullOrWhiteSpace(joinCallBody.DisplayName))
+            //{
+            //    // Teams client does not allow changing of ones own display name.
+            //    // If display name is specified, we join as anonymous (guest) user
+            //    // with the specified display name.  This will put bot into lobby
+            //    // unless lobby bypass is disabled.
+            //    joinParams.GuestIdentity = new Identity
+            //    {
+            //        Id = Guid.NewGuid().ToString(),
+            //        DisplayName = joinCallBody.DisplayName,
+            //    };
+            //}
 
-            if (!CallHandlers.TryGetValue(joinParams.ChatInfo.ThreadId, out CallHandler? call))
-            {
-                var statefulCall = await Client.Calls().AddAsync(joinParams, scenarioId).ConfigureAwait(false);
-                statefulCall.GraphLogger.Info($"Call creation complete: {statefulCall.Id}");
-                _logger.LogInformation($"Call creation complete: {statefulCall.Id}");
-                return statefulCall;
-            }
+            return await callClient.JoinCall(joinCallBody);
 
-            throw new Exception("Call has already been added");
+            //if (!CallHandlers.TryGetValue(joinParams.ChatInfo.ThreadId, out CallHandler? call))
+            //{
+            //    var statefulCall = await Client.Calls().AddAsync(joinParams, scenarioId).ConfigureAwait(false);
+            //    statefulCall.GraphLogger.Info($"Call creation complete: {statefulCall.Id}");
+            //    _logger.LogInformation($"Call creation complete: {statefulCall.Id}");
+            //    return statefulCall;
+            //}
+
+            //throw new Exception("Call has already been added");
         }
 
         /// <summary>

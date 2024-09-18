@@ -10,13 +10,11 @@ namespace AITeamAssistant.Bot
     {
         private readonly IOpenAIService openAIService;
         private readonly IPromptFlowService promptFlowService;
-        private readonly IMeetingService meetingService;
 
-        public TextBot(IOpenAIService openAIService, IPromptFlowService promptFlowService, IMeetingService meetingService)
+        public TextBot(IOpenAIService openAIService, IPromptFlowService promptFlowService)
         {
             this.openAIService = openAIService;
             this.promptFlowService = promptFlowService;
-            this.meetingService = meetingService;
         }
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
@@ -27,18 +25,18 @@ namespace AITeamAssistant.Bot
             await turnContext.SendActivityAsync(MessageFactory.Text(answer, answer), cancellationToken);
         }
 
-        public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
+       /* public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
         {
             if (turnContext.Activity.Type == ActivityTypes.Event && turnContext.Activity.Name == "meeting")
             {
                 var meetingInfo = await meetingService.GetMeetingInfoAsync(turnContext.Activity.ChannelId); // @TODO;
-                /*if (meetingInfo != null)
-                    await JoinMeetingAsync(meetingInfo.JoinWebUrl);*/
+                *//*if (meetingInfo != null)
+                    await JoinMeetingAsync(meetingInfo.JoinWebUrl);*//*
             }
 
             await base.OnTurnAsync(turnContext, cancellationToken);
         }
-
+*/
 
         protected override async Task OnMembersAddedAsync(IList<ChannelAccount> membersAdded, ITurnContext<IConversationUpdateActivity> turnContext, CancellationToken cancellationToken)
         {

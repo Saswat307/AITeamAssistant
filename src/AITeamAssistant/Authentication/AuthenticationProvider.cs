@@ -89,7 +89,7 @@ namespace AITeamAssistant.Authentication
         /// <returns>
         /// The <see cref="Task" />.
         /// </returns>
-        public async Task AuthenticateOutboundRequestAsync(HttpRequestMessage request, string tenant)
+        public async Task AuthenticateOutboundRequestAsync(HttpRequestMessage request, string tenant) 
         {
             const string schema = "Bearer";
             const string replaceString = "{tenant}";
@@ -98,7 +98,6 @@ namespace AITeamAssistant.Authentication
 
             // If no tenant was specified, we craft the token link using the common tenant.
             // https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-v2-protocols#endpoints
-            tenant = string.IsNullOrWhiteSpace(tenant) ? "common" : tenant;
             var tokenLink = oauthV2TokenLink.Replace(replaceString, tenant);
             var scopes = new string[] { $"{resource}/.default" };
 
@@ -106,6 +105,8 @@ namespace AITeamAssistant.Authentication
             var app = ConfidentialClientApplicationBuilder.Create(appId)
                 .WithAuthority(tokenLink)
                 .WithClientSecret(appSecret)
+                .WithTenantId(tenant)
+                .WithClientId(appId)
                 .Build();
 
             AuthenticationResult result;
