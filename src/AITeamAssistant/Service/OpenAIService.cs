@@ -23,7 +23,7 @@ namespace AITeamAssistant.Service
             "Each work item should be clear, concise, and specific, detailing the task to be performed." +
             " Ensure that each work item includes a title and a brief description, and the output should be in the following format" +
             "{0} ."+
-            "The output must be a JSON array, and no extra lines or content should be added, as it will be directly parsed as JSON.";
+            "The output must be a JSON array, and no extra lines or content should be added, as it will be directly parsed as JSON array.";
 
         private readonly IConfiguration _configuration;
         private readonly ChatClient chatClient;
@@ -81,6 +81,11 @@ namespace AITeamAssistant.Service
             _logger.LogInformation("Input Prompt to Detect Action - " + inputPrompt);
             // Get the list of actions dynamically
 
+         /*   if(inputPrompt != null && inputPrompt.Contains("action",StringComparison.OrdinalIgnoreCase))
+            {
+                return "CreateADOTask";
+            }*/
+
             var implemptedActionNames = string.Join(", ", implementedActions);
 
             string actionDetectionPrompt = string.Format(ActionDetectSystemPromptTemplate, implemptedActionNames);
@@ -106,7 +111,6 @@ namespace AITeamAssistant.Service
                 }
             }
             
-
             return ActionDispatcher.NoActionFound;
         }
 

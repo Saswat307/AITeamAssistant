@@ -7,6 +7,7 @@ using Microsoft.Skype.Bots.Media;
 using OpenAI.Chat;
 using System.Runtime.InteropServices;
 using System.Text;
+using AITeamAssistant.Bot;
 
 namespace AITeamAssistant.Media
 {
@@ -29,7 +30,8 @@ namespace AITeamAssistant.Media
                                     "Maia", "Maia,", "Maia.","Maia?",
                                     "Meya", "Meya,", "Meya.","Meya?",
                                     "Miya", "Miya,", "Miya.","Miya?",
-                                    "Meya", "Meya,", "Meya.","Meya?"
+                                    "Meya", "Meya,", "Meya.","Meya?",
+                                    "Mike", "Mike,", "Mike.", "Mike?"
                                 };
         /// <summary>
         /// The is the indicator if the media stream is running
@@ -324,6 +326,7 @@ namespace AITeamAssistant.Media
                     var chatMessageCopy = meetingConversation.ToList();
                     var actionResponse = await actionDispatcher.DispatchActionAsync(action, chatMessageCopy);
                     response = actionResponse.AudioResponse;
+                    await TextBot.SendAdhocMessageAsync(actionResponse.TextResponse);
                     meetingConversation.Add(new UserChatMessage(response));
                 }
 
@@ -348,7 +351,7 @@ namespace AITeamAssistant.Media
                 await TextToSpeech(response);
             } else
             {
-                _logger.LogInformation("Employee Name found. Not a question.");
+                _logger.LogInformation("Employee Name Not found. Not a question.");
                 AppendConversation(lastMessage);
             }
         }

@@ -6,19 +6,28 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
 using Microsoft.Graph.Communications.Common;
 using OpenAI.Chat;
+using Microsoft.AspNetCore.JsonPatch.Internal;
+using Microsoft.Bot.Builder.Integration.AspNet.Core;
 
 namespace AITeamAssistant.Bot
 {
     public class TextBot : ActivityHandler
     {
+
+        private static ConversationReference storedConversationReference;
+        public static ITurnContext<IMessageActivity> turnContextStatic;
+
         private readonly IPromptFlowService promptFlowService;
         private readonly IMeetingService meetingService;
 
         private IOpenAIService _openAIService;
         private ActionDispatcher actionDispatcher;
 
-        public TextBot(IOpenAIService openAIService, IPromptFlowService promptFlowService, IMeetingService meetingService, ActionDispatcher actionDispatcher)
+        private static IBotFrameworkHttpAdapter adapterStatic;
+
+        public TextBot(IOpenAIService openAIService, IPromptFlowService promptFlowService, IMeetingService meetingService, ActionDispatcher actionDispatcher, IBotFrameworkHttpAdapter adapter)
         {
+            adapterStatic = adapter;
             this.promptFlowService = promptFlowService;
             this.meetingService = meetingService;
             this._openAIService = openAIService;
@@ -27,6 +36,8 @@ namespace AITeamAssistant.Bot
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
+
+            storedConversationReference = turnContext.Activity.GetConversationReference();
             var question = turnContext.Activity.RemoveRecipientMention();
             //var answer = await this.openAIService.Ask(question);
             //await turnContext.SendActivityAsync(MessageFactory.Text(answer, answer), cancellationToken);
@@ -73,6 +84,26 @@ namespace AITeamAssistant.Bot
                 {
                     await turnContext.SendActivityAsync(MessageFactory.Text(welcomeText, welcomeText), cancellationToken);
                 }
+            }
+        }
+
+        public static async Task SendAdhocMessageAsync(string messageText)
+        {
+            var botAppId = "baa7df0a-f695-4c07-927b-1eec736f88ba";
+            if (storedConversationReference != null)
+            {
+                await ((BotAdapter)adapterStatic).ContinueConversationAsync(
+                    botAppId,
+                    storedConversationReference,
+                    async (ITurnContext turnContext, CancellationToken cancellationToken) =>
+                    {
+                        await turnContext.SendActivityAsync(MessageFactory.Text(messageText), cancellationToken);
+                    },
+                    CancellationToken.None);
+            }
+            else
+            {
+                Console.WriteLine("No conversation reference stored.");
             }
         }
     }
