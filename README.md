@@ -78,11 +78,28 @@ The Bot requires an SSL certificate signed by a Certificate Authority. You can c
     ```
 3. Start the application in Visual Studio.
 
+### Setup Ngrok
+
+1. Download and install Ngrok.
+2. Get the Ngrok authToken and replace it ngrok.yaml
+	```
+	ngrok authtoken <auth_token>
+	```
+3. Run the following ngrok command to create a tunnel:
+	```
+	ngrok.exe  start --all --config=<Path to your ngrok.yml>
+	```
+4. Add the Ngrok CNames in your DNS settings:
+	```
+	tcp.<domain.com> -> <ngrok_url>
+	bot.<domain.com> -> <ngrok_url>
+	```
+
 ### Testing
 
 You can test the bot using the following cURL command:
 ```bash
-curl --location --request POST 'https://signal.ngrok.io/Call' \
+curl --location --request POST 'https://bot.<domain.com>/Call' \
 --header 'Content-Type: application/json' \
 --data-raw '{ "joinURL": "https://teams.microsoft.com/l/meetup-join/..." }'
 ```
