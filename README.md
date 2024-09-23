@@ -1,11 +1,32 @@
 # AI Team Assistant
 
-TeamMate AI is an intelligent assistant for Microsoft Teams, designed to enhance meetings by providing real-time insights, suggestions, and action items based on live conversations. It can access private context, such as design documents and meeting notes, to deliver relevant recommendations, making meetings more focused and productive.
+## Problem Statement
+In today’s remote and hybrid work environments, teams often struggle with unfocused meetings, scattered discussions, and missed action items, which reduce collaboration and overall productivity. Managing large volumes of private knowledge such as source code, design documents, and meeting notes during live conversations can overwhelm team members.
 
+## Solution
+Imagine a Human-like, Voice-enabled AI assistant that feels like an integral part of your team. Personalized for each team, this assistant goes beyond typical AI tools by actively collaborating as a smart team member.
+
+It learns from your team's unique knowledge base, such as source code, design documents, and specifications and participates in meetings through Microsoft 365 and Teams. With real-time voice interactions and task automation, it revolutionizes how teams manage information, make decisions, and streamline everyday tasks.
 ## Design Diagram
 
 ![Design Diagram](./images/design_diagram.png)
 
+
+## Implementation using Azure Architecture
+
+**Azure Bot Service:** Hosts the voice-enabled Teams bot, allowing it to participate in meetings.
+
+**Graph API:** Manages communication between the Teams bot and meeting participants, facilitating both audio and text interactions.
+
+**Azure Speech Service:** Converts meeting audio into text for analysis and transforms text into voice responses for a seamless audio experience.
+
+**Storage Account:** Stores private project data such as documents, specifications, and notes.
+
+**Azure Search:** Retrieves private knowledge stored in Azure Storage, including design documents, project details, and meeting notes, to support real-time decision-making.
+
+**Azure Prompt Flow:** Adds private knowledge from documents and conversations to questions, enabling Azure OpenAI to provide context-aware responses and actions.
+
+**Azure OpenAI:** Detects actions in conversations, extracts insights, and generates context-relevant responses based on private knowledge and meeting discussions.
 
 ## Prerequisites
 
